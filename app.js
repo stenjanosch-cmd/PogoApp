@@ -7,35 +7,26 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.error('Service Worker Fehler', err));
 }
 
-// --- Intro Logik (ROBUST & SKIP-FUNKTION) ---
+// --- Intro Logik (Sauberes Backup) ---
 function playIntro() {
-    const overlay = document.getElementById('intro-overlay'); 
+    const overlay = document.getElementById('intro-overlay');
     const video = document.getElementById('intro-video');
-    const startBtn = document.getElementById('start-btn');
-
-    // Button wird zum "Überspringen", falls das Video auf dem Handy mal lädt und lädt...
-    startBtn.innerText = "⏭️ Überspringen";
-    startBtn.onclick = () => endIntro();
-
-    const endIntro = () => {
-        video.style.opacity = '0'; 
-        setTimeout(() => overlay.style.display = 'none', 500);
+    
+    document.getElementById('start-btn').style.display = 'none';
+    video.style.opacity = '1';
+    video.play();
+    
+    // Simpler Notfall-Ausweg: Ein Tippen auf den Bildschirm überspringt das Video sofort, falls es mal hängen sollte.
+    overlay.onclick = () => {
+        video.pause();
+        video.style.opacity = '0';
+        overlay.style.display = 'none';
     };
 
-    // Wenn das Video fertig ist ODER wenn es einen Ladefehler gibt, geht es ins Menü
-    video.onended = endIntro;
-    video.onerror = endIntro; 
-
-    video.style.opacity = '1'; 
-    
-    // Versuche das Video zu starten und fange Fehlermeldungen des Browsers ab
-    let playPromise = video.play();
-    if (playPromise !== undefined) {
-        playPromise.catch(error => {
-            console.error("Video konnte nicht abgespielt werden:", error);
-            endIntro(); // Sofort ins Menü springen, statt im Blackscreen zu hängen
-        });
-    }
+    video.onended = () => { 
+        video.style.opacity = '0'; 
+        setTimeout(() => overlay.style.display = 'none', 1000); 
+    };
 }
 
 // --- Dynamische Hintergründe ---
@@ -79,7 +70,7 @@ function showScreen(screenId) {
     if(screenId === 'screen-cheatsheet' && document.getElementById('cheat-icons').innerHTML === '') setupCheatsheet();
 }
 
-// === V22 GAME MECHANICS ===
+// === GAME MECHANICS ===
 let currentMode = 'attack'; let currentPokemonTypes = []; let currentEnemyAttackType = ''; let currentPokemonId = null; let currentBaseId = null; let currentPokemonName = ''; let currentPokemonImg = ''; let firstAttempt = true; let guessedTypesArray = []; let currentRocket = null; let timer = null; let timeLeft = 0; let rocketShuffleBag = [];
 
 const typeTranslations = { normal: "Normal", fire: "Feuer", water: "Wasser", electric: "Elektro", grass: "Pflanze", ice: "Eis", fighting: "Kampf", poison: "Gift", ground: "Boden", flying: "Flug", psychic: "Psycho", bug: "Käfer", rock: "Gestein", ghost: "Geist", dragon: "Drache", dark: "Unlicht", steel: "Stahl", fairy: "Fee" };
