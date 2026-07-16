@@ -1,0 +1,15 @@
+{
+  "name": "PoGo Master-Trainer",
+  "short_name": "PoGoTrainer",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0d1b2a",
+  "theme_color": "#0d1b2a",
+  "icons": [
+    {
+      "src": "https://archives.bulbagarden.net/media/upload/9/93/Bag_Pok%C3%A9_Ball_Sprite.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

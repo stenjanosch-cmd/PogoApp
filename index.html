@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PoGo Trainer</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d1b2a">
+    <link rel="apple-touch-icon" href="https://archives.bulbagarden.net/media/upload/9/93/Bag_Pok%C3%A9_Ball_Sprite.png">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Righteous&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="intro-overlay">
+        <button id="start-btn" onclick="playIntro()">▶ Training Starten</button>
+        <video id="intro-video" src="https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Professional_Pok%C3%A9mon_battle_stadium_1080p_202607161353.mp4?raw=true" playsinline></video>
+    </div>
+
+    <div class="container">
+        <div id="screen-menu" class="screen active">
+            <h1 style="font-size: 34px;">PoGo Trainer</h1>
+            <div class="trainer-card">
+                <div class="trainer-avatar">🛡️</div>
+                <div class="trainer-info">
+                    <div class="trainer-name">Level <span id="trainer-lvl">1</span></div>
+                    <div class="trainer-title" id="trainer-title">Rookie</div>
+                    <div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-fill"></div><div class="xp-text" id="xp-text">0 / 50 XP</div></div>
+                </div>
+            </div>
+
+            <div class="section-title">Box-Management</div>
+            <div class="menu-grid">
+                <button class="menu-btn btn-sort" onclick="startSortGame()">📦 Behalten oder Weg?</button>
+            </div>
+            
+            <div class="section-title">Basis-Training</div>
+            <div class="menu-grid">
+                <button class="menu-btn btn-attack" onclick="startGame('attack')">⚔️ Angreifer</button>
+                <button class="menu-btn btn-defend" onclick="startGame('defend')">🛡️ Verteidiger</button>
+                <button class="menu-btn btn-guess" onclick="startGame('guess')">❓ Typen raten</button>
+                <button class="menu-btn btn-weather" onclick="startGame('weather')">☀️ Wetter-Boost</button>
+            </div>
+
+            <div class="section-title">Spezial & Profi</div>
+            <div class="menu-grid">
+                <button class="menu-btn btn-rocket" onclick="startGame('rocket')">🚀 Team Rocket</button>
+                <button class="menu-btn btn-radar" onclick="startGame('radar')">🌑 Radar (Schatten)</button>
+                <button class="menu-btn btn-hardcore" onclick="startGame('hardcore')">🔥 Doppelschwäche</button>
+            </div>
+
+            <div class="section-title">Tools & Sammlung</div>
+            <div class="menu-grid">
+                <button class="menu-btn btn-tools" onclick="showScreen('screen-cheatsheet')">📜 Spickzettel</button>
+                <button class="menu-btn btn-dex" onclick="showPokedex()">📖 Pokédex</button>
+            </div>
+        </div>
+
+        <div id="screen-sort" class="screen">
+            <div class="top-nav">
+                <button class="back-btn" onclick="showScreen('screen-menu')">⮌ Menü</button>
+                <div id="sort-score" style="font-family: 'Righteous'; color: #ffcb05;">Box Check</div>
+            </div>
+            <p class="subtitle">Wischen oder Buttons tippen!</p>
+            
+            <div class="sort-area" id="sort-area">
+                <div class="sort-card" id="sort-card">
+                    <img class="sort-img" id="sort-img" src="" alt="Pokemon">
+                    <div class="sort-name" id="sort-name">Lade...</div>
+                </div>
+                <div id="willow-overlay" onclick="closeWillow()">
+                    <div class="willow-container">
+                        <div class="willow-speech" id="willow-text">Text</div>
+                        <img class="willow-img" src="https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/150px-Professor_Willow.png?raw=true" alt="Prof Willow">
+                    </div>
+                    <div style="font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 15px; font-weight: bold; text-transform: uppercase;">(Tippen zum Fortfahren)</div>
+                </div>
+            </div>
+
+            <div class="sort-controls">
+                <button class="control-btn btn-transfer" onclick="handleSortAction('transfer')">🗑️<br>Verschicken<br><span style="font-size:8px;">(Links wischen)</span></button>
+                <button class="control-btn btn-keep" onclick="handleSortAction('keep')">⭐<br>Behalten<br><span style="font-size:8px;">(Hoch wischen)</span></button>
+                <button class="control-btn btn-trade" onclick="handleSortAction('trade')">🤝<br>Tauschen<br><span style="font-size:8px;">(Rechts wischen)</span></button>
+            </div>
+        </div>
+
+        <div id="screen-game" class="screen">
+            <div class="top-nav">
+                <button class="back-btn" onclick="showScreen('screen-menu')">⮌ Menü</button>
+                <div id="game-title" style="font-weight: 900; color: #ffcb05; text-transform: uppercase;">Modus</div>
+                <div id="timer-display"></div>
+            </div>
+            <p class="subtitle" id="game-subtitle">Lade...</p>
+            <div id="pokemon-container">
+                <div id="rocket-speech" class="speech-bubble"></div>
+                <div id="loading">Suche...</div>
+                <img id="rocket-image" src="" alt="Team Rocket">
+                <div id="rocket-avatar" class="rocket-avatar">R</div>
+                <img id="pokemon-image" src="" alt="Pokémon">
+                <div id="weather-icon">☀️</div>
+                <div id="pokemon-name"></div>
+                <div id="pokemon-types"></div>
+            </div>
+            <div class="btn-container" id="buttons"></div>
+            <div class="name-options-container" id="name-buttons"></div>
+            <div id="feedback"><span id="feedback-main"></span><div id="feedback-reason"></div></div>
+            <button id="next-btn" onclick="fetchNextEncounter()">Weiter!</button>
+        </div>
+
+        <div id="screen-cheatsheet" class="screen">
+            <div class="top-nav"><button class="back-btn" onclick="showScreen('screen-menu')">⮌ Menü</button></div>
+            <h1>Spickzettel</h1>
+            <div class="cheat-container"><div class="cheat-select-grid" id="cheat-icons"></div><div class="cheat-result" id="cheat-result"></div></div>
+        </div>
+
+        <div id="screen-pokedex" class="screen">
+            <div class="top-nav">
+                <button class="back-btn" onclick="showScreen('screen-menu')">⮌ Menü</button>
+                <div class="dex-stats" id="dex-stats">0 Gefangen</div>
+            </div>
+            <h1>Pokédex</h1>
+            <div class="pokedex-grid" id="pokedex-grid"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="game-sortieren.js"></script>
+</body>
+</html>
