@@ -2,11 +2,17 @@
 // DATEI: game-sortieren.js
 // ==============================================
 
-const metaPvEPool = [3,6,9,68,149,150,248,260,373,376,382,383,384,448,464,483,484,487,530,635,643,644,798,800];
+// Die wichtigsten Meta-Raid-Angreifer (erweitert auf ~60 Top-Picks)
+const metaPvEPool = [3,6,9,65,68,94,130,149,150,212,248,254,257,260,282,289,373,376,382,383,384,409,445,448,460,464,468,473,483,484,487,530,534,555,609,612,635,638,639,643,644,645,646,798,800,879,888,889,900,988,999,1000];
+
+// Pokémon, die nach einem Tausch absolut kostenlos entwickelt werden können
+const tradeEvoPool = [64, 67, 75, 93, 525, 533, 588, 616, 708, 710];
+
+// Spezial-Events und Legendäre
 const costumePool = [1,4,7,25,52,94,133,143,172,175,471,710]; 
 const legendaryPool = [144,145,146,150,151,243,244,245,249,250,251,377,378,379,380,381,382,383,384,385,386,480,481,482,483,484,485,486,487,488,489,490,491,492,493,494];
 
-let currentSortMon = { id: null, name: "", isCrypto: false, isShiny: false, isEvent: false, isSpecialBg: false, isMeta: false, isLegendary: false };
+let currentSortMon = { id: null, name: "", isCrypto: false, isShiny: false, isEvent: false, isSpecialBg: false, isMeta: false, isLegendary: false, isTradeEvo: false };
 let isAnimating = false;
 
 function startSortGame() { 
@@ -20,8 +26,17 @@ async function loadNextSortPokemon() {
     card.className = "sort-card"; card.style.transform = "translate(0px, 0px)"; card.style.opacity = "1";
     img.style.display = "none"; nameEl.innerText = "Sondiere Box...";
 
-    const id = Math.floor(Math.random() * 1025) + 1; // Voller Pool!
-    currentSortMon = { id: id, isMeta: metaPvEPool.includes(id), isLegendary: legendaryPool.includes(id), isCrypto: Math.random() < 0.15, isShiny: Math.random() < 0.15, isSpecialBg: Math.random() < 0.10, isEvent: costumePool.includes(id) ? Math.random() < 0.40 : false };
+    const id = Math.floor(Math.random() * 1025) + 1;
+    currentSortMon = { 
+        id: id, 
+        isMeta: metaPvEPool.includes(id), 
+        isTradeEvo: tradeEvoPool.includes(id),
+        isLegendary: legendaryPool.includes(id), 
+        isCrypto: Math.random() < 0.15, 
+        isShiny: Math.random() < 0.15, 
+        isSpecialBg: Math.random() < 0.10, 
+        isEvent: costumePool.includes(id) ? Math.random() < 0.40 : false 
+    };
 
     try {
         const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`); const data = await res.json();
@@ -41,18 +56,35 @@ function handleSortAction(action) {
     if(isAnimating) return; isAnimating = true;
     let correctActions = []; let reason = "";
     
+    // PRIO 1: Extrem Seltene Formen
     if (currentSortMon.isShiny || currentSortMon.isSpecialBg || currentSortMon.isEvent) {
         correctActions = ['keep', 'trade'];
-        reason = currentSortMon.isShiny ? "Ein Shiny! ✨ Extrem selten. Behalte es oder nutze es für einen Glückstausch mit deiner Schwester." : (currentSortMon.isSpecialBg ? "Dieses Pokémon hat einen Spezial-Hintergrund! Extrem selten, niemals wegwerfen." : "Event-Kostüme sind limitiert! Perfekt für die eigene Sammlung oder zum Tauschen.");
-    } else if (currentSortMon.isCrypto) {
+        reason = currentSortMon.isShiny ? "Ein Shiny! ✨ Extrem selten. Behalte es oder nutze es für einen Glückstausch." : (currentSortMon.isSpecialBg ? "Spezial-Hintergrund! Extrem selten, niemals wegwerfen." : "Event-Kostüme sind limitiert! Perfekt für die Sammlung oder zum Tauschen.");
+    } 
+    // PRIO 2: Crypto Status
+    else if (currentSortMon.isCrypto) {
         if (currentSortMon.isMeta) { correctActions = ['keep']; reason = `Ein Crypto-${currentSortMon.name} ist ein brutaler Raid-Angreifer! Cryptos kann man nicht tauschen, also unbedingt behalten!`; } 
-        else { correctActions = ['transfer']; reason = "Ein schlechtes Crypto ohne Raid-Nutzen. Da Cryptos nicht getauscht werden können: Erlösen für die Medaille oder direkt verschicken!"; }
-    } else if (currentSortMon.isLegendary) {
-        correctActions = ['keep', 'trade']; reason = "Ein Legendäres/Mystisches Pokémon! Gute Werte behältst du für Raids, schlechte tauschst du für XL-Sonderbonbons.";
-    } else if (currentSortMon.isMeta) {
-        correctActions = ['keep', 'trade']; reason = "Ein starker PvE-Angreifer! Behalte es für dein Raid-Team, oder tausche es, falls die Werte schlecht sind.";
-    } else {
-        correctActions = ['transfer', 'trade']; reason = "Kein Meta-Pokémon und nichts Besonderes. Falls du Platz brauchst -> Verschicken. Alternativ: Tauschen zum XL-Bonbons Farmen.";
+        else { correctActions = ['transfer']; reason = "Ein schwaches Crypto ohne Raid-Nutzen. Da Cryptos nicht getauscht werden können: Erlösen für die Medaille oder direkt verschicken!"; }
+    } 
+    // PRIO 3: Tausch-Entwicklungen (Gratis XP)
+    else if (currentSortMon.isTradeEvo) {
+        correctActions = ['trade'];
+        reason = "Dieses Pokémon hat eine kostenlose Entwicklung nach dem Tauschen! Unbedingt aufheben und tauschen für Gratis-XP!";
+    }
+    // PRIO 4: Legendäre (XL-Sonderbonbons)
+    else if (currentSortMon.isLegendary) {
+        correctActions = ['keep', 'trade']; 
+        reason = "Ein Legendäres/Mystisches Pokémon! Gute Werte behältst du für Raids, schlechte tauschst du für garantiertes XL-Bonbon.";
+    } 
+    // PRIO 5: Meta-Angreifer (XL-Bonbons)
+    else if (currentSortMon.isMeta) {
+        correctActions = ['keep', 'trade']; 
+        reason = "Ein extrem wichtiges Meta-Pokémon! Behalte es für dein Raid-Team oder tausche es, um gezielt XL-Bonbons zu farmen.";
+    } 
+    // PRIO 6: Der Rest (Füller)
+    else {
+        correctActions = ['transfer', 'trade']; 
+        reason = "Kein Meta-Pokémon und nichts Besonderes. Verschicken für Platz, oder tauschen zum generellen XL-Bonbons generieren.";
     }
 
     const card = document.getElementById('sort-card');
@@ -61,8 +93,15 @@ function handleSortAction(action) {
     if(action === 'keep') card.style.transform = "translate(0px, -200px) scale(1.1)";
     
     setTimeout(() => {
-        if (correctActions.includes(action)) { card.classList.add('anim-catch'); addXp(15); setTimeout(() => { isAnimating = false; loadNextSortPokemon(); }, 600); } 
-        else { card.classList.add('anim-flee'); setTimeout(() => showWillow(reason), 400); }
+        if (correctActions.includes(action)) { 
+            card.classList.add('anim-catch'); 
+            addXp(15); 
+            setTimeout(() => { isAnimating = false; loadNextSortPokemon(); }, 600); 
+        } 
+        else { 
+            card.classList.add('anim-flee'); 
+            setTimeout(() => showWillow(reason), 400); 
+        }
     }, 200);
 }
 
