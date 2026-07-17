@@ -8,7 +8,6 @@ const bgList = [
     'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Tools_and_Sammlung_room_202607161335.jpeg?raw=true'
 ];
 
-// Setzt den zufälligen Hintergrund für das Intro-Overlay
 document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('intro-overlay');
     if (overlay) {
@@ -19,11 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- AUDIO PLAYER LOGIK ---
+// --- AUDIO PLAYER LOGIK (Mit 3 Sekunden Crossfade) ---
 
-// Umgestellt auf das stabile CDN, damit die Browser das Audio nicht blockieren
 const firstSong = "https://cdn.jsdelivr.net/gh/stenjanosch-cmd/PogoApp/Here%20We%20Go%20Again.mp3";
-
 const playlist = [
     "https://cdn.jsdelivr.net/gh/stenjanosch-cmd/PogoApp/Aiming%20To%20Be%20A%20Pokemon%20Master%20(1).mp3",
     "https://cdn.jsdelivr.net/gh/stenjanosch-cmd/PogoApp/Aiming%20To%20Be%20A%20Pokemon%20Master.mp3",
@@ -33,37 +30,52 @@ const playlist = [
     "https://cdn.jsdelivr.net/gh/stenjanosch-cmd/PogoApp/Untitled.mp3"
 ];
 
-let audioPlayer = new Audio();
+// Zwei Player für den fließenden Übergang
+let playerA = new Audio();
+let playerB = new Audio();
+let currentPlayer = playerA;
+
 let isMuted = false;
 let isFirstSongPlayed = false;
 let lastPlayedIndex = -1;
+let isFading = false;
+const maxVolume = 0.5;
 
-// Diese Funktion wird exakt beim Klick auf den Start-Button aufgerufen, 
-// um das Audio-Objekt für den Browser zu legitimieren (Auto-Play Unlock)
 function initAudio() {
-    if (!audioPlayer.src) {
-        audioPlayer.src = firstSong;
-        audioPlayer.load();
+    if (!playerA.src) {
+        playerA.src = firstSong;
+        playerA.load();
     }
 }
 
 function startMusicPlayer() {
     if (isFirstSongPlayed) return; 
     
-    if (!audioPlayer.src || audioPlayer.src === '') {
-        audioPlayer.src = firstSong;
+    if (!currentPlayer.src || currentPlayer.src === '') {
+        currentPlayer.src = firstSong;
     }
-    audioPlayer.volume = 0.5; 
+    currentPlayer.volume = isMuted ? 0 : maxVolume; 
     
-    audioPlayer.play().then(() => {
+    currentPlayer.play().then(() => {
         isFirstSongPlayed = true;
     }).catch(e => console.log("Musik-Autoplay blockiert:", e));
 
-    audioPlayer.onended = playNextSong;
+    currentPlayer.addEventListener('timeupdate', handleTimeUpdate);
 }
 
-function playNextSong() {
+function handleTimeUpdate(e) {
+    const player = e.target;
+    // Sobald weniger als 3 Sekunden übrig sind, den nächsten Song einblenden
+    if (player.duration > 0 && (player.duration - player.currentTime <= 3) && !isFading) {
+        isFading = true;
+        crossfadeToNext(player);
+    }
+}
+
+function crossfadeToNext(oldPlayer) {
     if (playlist.length === 0) return;
+    
+    const nextPlayer = (oldPlayer === playerA) ? playerB : playerA;
     
     let nextIndex;
     do {
@@ -71,13 +83,50 @@ function playNextSong() {
     } while (nextIndex === lastPlayedIndex && playlist.length > 1);
     
     lastPlayedIndex = nextIndex;
-    audioPlayer.src = playlist[nextIndex];
-    audioPlayer.play().catch(e => console.log("Musikwiedergabe blockiert:", e));
+    nextPlayer.src = playlist[nextIndex];
+    nextPlayer.volume = 0; // Startet stumm für den Fade
+    
+    nextPlayer.play().catch(e => console.log("Play error:", e));
+    nextPlayer.addEventListener('timeupdate', handleTimeUpdate);
+    
+    const fadeInterval = 50; 
+    const fadeSteps = 3000 / fadeInterval; // 3000ms = 3 Sekunden
+    let currentStep = 0;
+    
+    const fader = setInterval(() => {
+        currentStep++;
+        let fraction = currentStep / fadeSteps;
+        if (fraction > 1) fraction = 1;
+        
+        if (!isMuted) {
+            // Alter Song wird leiser
+            let oldVol = maxVolume * (1 - fraction);
+            if (oldVol < 0) oldVol = 0;
+            oldPlayer.volume = oldVol;
+            
+            // Neuer Song wird lauter
+            let newVol = maxVolume * fraction;
+            if (newVol > maxVolume) newVol = maxVolume;
+            nextPlayer.volume = newVol;
+        }
+        
+        // Ende des Fades
+        if (currentStep >= fadeSteps) {
+            clearInterval(fader);
+            oldPlayer.pause();
+            oldPlayer.currentTime = 0;
+            oldPlayer.removeEventListener('timeupdate', handleTimeUpdate);
+            isFading = false;
+        }
+    }, fadeInterval);
+    
+    currentPlayer = nextPlayer;
 }
 
 function toggleMute() {
     isMuted = !isMuted;
-    audioPlayer.muted = isMuted;
+    playerA.muted = isMuted;
+    playerB.muted = isMuted;
     
     const muteBtn = document.getElementById('mute-btn');
     if (muteBtn) {

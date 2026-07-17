@@ -2,9 +2,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.error('Service Worker Fehler', err));
 }
 
-// NEUE, STABILE INTRO-FUNKTION (Mit Audio-Unlocker)
 function playIntro() {
-    // WICHTIG: Erlaubt dem Browser, Audio abzuspielen, weil es direkt beim Klick passiert
     if (typeof initAudio === 'function') initAudio();
 
     const overlay = document.getElementById('intro-overlay');
@@ -22,9 +20,7 @@ function playIntro() {
     try {
         let playPromise = video.play();
         if (playPromise !== undefined) {
-            playPromise.then(() => {
-                // Video läuft
-            }).catch(error => {
+            playPromise.then(() => {}).catch(error => {
                 console.log("Auto-Play blockiert, überspringe Intro.");
                 overlay.style.display = 'none';
                 if (typeof startMusicPlayer === 'function') startMusicPlayer();
@@ -102,20 +98,43 @@ function setupCheatsheet() {
     });
 }
 function renderCheatResult(selectedType) {
-    const res = document.getElementById('cheat-result'); res.style.display = 'block'; res.style.border = `2px solid ${typeColors[selectedType]}`;
-    let strongAgainst = []; let weakAgainst = []; let resists = []; let vulnerableTo = [];
+    const res = document.getElementById('cheat-result'); 
+    res.style.display = 'block'; res.style.border = `2px solid ${typeColors[selectedType]}`;
+    
+    let atkEff = []; let atkWeak = []; let atkImmune = [];
+    let defWeak = []; let defRes = []; let defImmune = [];
+    
     Object.keys(typeTranslations).forEach(defType => {
+        // Angreifer Perspektive
         let atkMult = typeChart[selectedType] && typeChart[selectedType][defType] !== undefined ? typeChart[selectedType][defType] : 1;
-        if(atkMult > 1) strongAgainst.push(typeTranslations[defType]); if(atkMult < 1) weakAgainst.push(typeTranslations[defType]);
+        if(atkMult > 1) atkEff.push(`${typeTranslations[defType]}`);
+        if(atkMult === 0.625) atkWeak.push(`${typeTranslations[defType]}`);
+        if(atkMult < 0.625) atkImmune.push(`${typeTranslations[defType]} (${atkMult}x)`);
+        
+        // Verteidiger Perspektive
         let defMult = typeChart[defType] && typeChart[defType][selectedType] !== undefined ? typeChart[defType][selectedType] : 1;
-        if(defMult < 1) resists.push(typeTranslations[defType]); if(defMult > 1) vulnerableTo.push(typeTranslations[defType]);
+        if(defMult > 1) defWeak.push(`${typeTranslations[defType]}`);
+        if(defMult === 0.625) defRes.push(`${typeTranslations[defType]}`);
+        if(defMult < 0.625) defImmune.push(`${typeTranslations[defType]} (${defMult}x)`);
     });
-    res.innerHTML = `<h3 style="color:${typeColors[selectedType]}">${typeTranslations[selectedType].toUpperCase()}</h3>
-        <div class="cheat-row">⚔️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Sehr effektiv gegen:</span> <span class="good">${strongAgainst.length>0 ? strongAgainst.join(', ') : '-'}</span></div>
-        <div class="cheat-row">⚔️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Macht wenig Schaden bei:</span> <span class="bad">${weakAgainst.length>0 ? weakAgainst.join(', ') : '-'}</span></div>
-        <hr style="border-color: rgba(255,255,255,0.1); margin: 5px 0;">
-        <div class="cheat-row">🛡️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Resistiert Angriffe von:</span> <span class="good">${resists.length>0 ? resists.join(', ') : '-'}</span></div>
-        <div class="cheat-row">🛡️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Nimmt extra Schaden von:</span> <span class="bad">${vulnerableTo.length>0 ? vulnerableTo.join(', ') : '-'}</span></div>`;
+
+    let html = `<h3 style="color:${typeColors[selectedType]}; margin-bottom: 5px;">${typeTranslations[selectedType].toUpperCase()}</h3>`;
+    
+    // ANGREIFER
+    html += `<div style="font-size:11px; color:#aaa; margin-top:5px; font-weight:bold; text-decoration:underline;">Als Angreifer (teilt Schaden aus):</div>`;
+    html += `<div class="cheat-row">⚔️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Sehr effektiv (1.6x):</span> <span class="good">${atkEff.length>0 ? atkEff.join(', ') : '-'}</span></div>`;
+    html += `<div class="cheat-row">⚔️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Wenig effektiv (0.625x):</span> <span class="bad">${atkWeak.length>0 ? atkWeak.join(', ') : '-'}</span></div>`;
+    if(atkImmune.length > 0) html += `<div class="cheat-row">⚔️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Kaum Schaden (<0.625x):</span> <span class="bad">${atkImmune.join(', ')}</span></div>`;
+    
+    html += `<hr style="border-color: rgba(255,255,255,0.1); margin: 8px 0;">`;
+    
+    // VERTEIDIGER
+    html += `<div style="font-size:11px; color:#aaa; font-weight:bold; text-decoration:underline;">Als Verteidiger (steckt Schaden ein):</div>`;
+    html += `<div class="cheat-row">🛡️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Schwach gegen (1.6x):</span> <span class="bad">${defWeak.length>0 ? defWeak.join(', ') : '-'}</span></div>`;
+    html += `<div class="cheat-row">🛡️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Resistiert (0.625x):</span> <span class="good">${defRes.length>0 ? defRes.join(', ') : '-'}</span></div>`;
+    if(defImmune.length > 0) html += `<div class="cheat-row">🛡️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Stark resistiert (<0.625x):</span> <span class="good">${defImmune.join(', ')}</span></div>`;
+
+    res.innerHTML = html;
 }
 function showPokedex() {
     showScreen('screen-pokedex'); const grid = document.getElementById('pokedex-grid'); grid.innerHTML = '';
@@ -138,7 +157,17 @@ function setupButtons() {
 setupButtons();
 function fetchNextEncounter() { if (currentMode === 'rocket') fetchRocketEncounter(); else if (currentMode === 'weather') fetchWeatherEncounter(); else fetchRandomPokemon(); }
 function resetUI() {
-    firstAttempt = true; guessedTypesArray = []; document.getElementById("loading").style.display = "block"; document.getElementById("pokemon-image").style.display = "none"; document.getElementById("pokemon-image").classList.remove('silhouette'); document.getElementById("rocket-image").style.display = "none"; document.getElementById("rocket-avatar").style.display = "none"; document.getElementById("weather-icon").style.display = "none"; document.getElementById("rocket-speech").style.display = "none"; document.getElementById("pokemon-name").innerText = ""; document.getElementById("pokemon-types").innerHTML = ""; document.getElementById("feedback").style.display = "none"; document.getElementById("feedback-reason").innerHTML = ""; document.getElementById("next-btn").style.display = "none"; document.getElementById("buttons").style.display = "grid"; document.getElementById("name-buttons").style.display = "none";
+    firstAttempt = true; guessedTypesArray = []; 
+    document.getElementById("loading").style.display = "block"; 
+    
+    // Bild-Reset (Entfernt Radar-Effekte für normale Modi)
+    const pokeImg = document.getElementById("pokemon-image");
+    pokeImg.style.display = "none"; 
+    pokeImg.classList.remove('silhouette'); 
+    pokeImg.style.filter = ""; 
+    pokeImg.style.transform = "";
+    
+    document.getElementById("rocket-image").style.display = "none"; document.getElementById("rocket-avatar").style.display = "none"; document.getElementById("weather-icon").style.display = "none"; document.getElementById("rocket-speech").style.display = "none"; document.getElementById("pokemon-name").innerText = ""; document.getElementById("pokemon-types").innerHTML = ""; document.getElementById("feedback").style.display = "none"; document.getElementById("feedback-reason").innerHTML = ""; document.getElementById("next-btn").style.display = "none"; document.getElementById("buttons").style.display = "grid"; document.getElementById("name-buttons").style.display = "none";
     if(timer) { clearInterval(timer); document.getElementById('timer-display').innerText = ""; }
     document.querySelectorAll('.type-btn').forEach(btn => { btn.classList.remove('eff-super', 'eff-normal', 'eff-weak'); btn.disabled = false; btn.style.border = "2px solid transparent"; const badge = btn.querySelector('.multiplier-badge'); if(badge) badge.style.display = "none"; });
 }
@@ -180,10 +209,22 @@ async function fetchRandomPokemon() {
         currentPokemonName = data.name.replace('-', ' ').toUpperCase(); 
         try { const speciesRes = await fetch(data.species.url); const deNameObj = (await speciesRes.json()).names.find(n => n.language.name === 'de'); if (deNameObj) currentPokemonName = deNameObj.name; } catch(e) {}
         currentPokemonImg = data.sprites.other['official-artwork'].front_default || data.sprites.front_default;
-        document.getElementById("pokemon-image").src = currentPokemonImg; document.getElementById("pokemon-image").onload = () => { document.getElementById("loading").style.display = "none"; document.getElementById("pokemon-image").style.display = "block"; };
+        
+        const pokeImg = document.getElementById("pokemon-image");
+        pokeImg.src = currentPokemonImg; 
+        pokeImg.onload = () => { 
+            document.getElementById("loading").style.display = "none"; 
+            pokeImg.style.display = "block"; 
+        };
         document.getElementById("pokemon-name").innerText = currentPokemonName; const tc = document.getElementById("pokemon-types");
+        
         if(currentMode === 'radar') {
-            document.getElementById("pokemon-image").classList.add('silhouette'); document.getElementById("pokemon-name").innerText = "???"; document.getElementById("buttons").style.display = "none"; document.getElementById("name-buttons").style.display = "grid"; document.getElementById("game-subtitle").innerHTML = "Wer ist das Pokémon?"; generateNameOptions(currentPokemonName);
+            pokeImg.classList.add('silhouette'); 
+            // Hier kommt der starke weiße Schattenriss und die Vergrößerung!
+            pokeImg.style.filter = "brightness(0) drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(2px 2px 0 #fff) drop-shadow(-2px -2px 0 #fff) drop-shadow(2px -2px 0 #fff) drop-shadow(-2px 2px 0 #fff)";
+            pokeImg.style.transform = "scale(1.3)";
+            
+            document.getElementById("pokemon-name").innerText = "???"; document.getElementById("buttons").style.display = "none"; document.getElementById("name-buttons").style.display = "grid"; document.getElementById("game-subtitle").innerHTML = "Wer ist das Pokémon?"; generateNameOptions(currentPokemonName);
         } else {
             if (currentMode === 'attack' || currentMode === 'hardcore') { currentPokemonTypes.forEach(type => { let badge = document.createElement("div"); badge.className = "type-badge"; badge.style.backgroundColor = typeColors[type]; badge.innerText = typeTranslations[type]; tc.appendChild(badge); }); } 
             else if (currentMode === 'defend') { currentEnemyAttackType = currentPokemonTypes[Math.floor(Math.random() * currentPokemonTypes.length)]; let badge = document.createElement("div"); badge.className = "type-badge"; badge.style.backgroundColor = typeColors[currentEnemyAttackType]; badge.innerText = "Greift an mit: " + typeTranslations[currentEnemyAttackType]; tc.appendChild(badge); }
@@ -198,7 +239,12 @@ async function generateNameOptions(correctName) {
     options.forEach(name => { let btn = document.createElement("button"); btn.className = "name-btn"; btn.innerText = name; btn.onclick = () => checkRadarAnswer(name, correctName); grid.appendChild(btn); });
 }
 function checkRadarAnswer(selected, correct) {
-    document.getElementById("pokemon-image").classList.remove('silhouette'); document.getElementById("pokemon-name").innerText = currentPokemonName;
+    const pokeImg = document.getElementById("pokemon-image");
+    pokeImg.classList.remove('silhouette'); 
+    pokeImg.style.filter = "none";
+    pokeImg.style.transform = "scale(1)";
+    
+    document.getElementById("pokemon-name").innerText = currentPokemonName;
     const tc = document.getElementById("pokemon-types"); tc.innerHTML = "";
     currentPokemonTypes.forEach(type => { let badge = document.createElement("div"); badge.className = "type-badge"; badge.style.backgroundColor = typeColors[type]; badge.innerText = typeTranslations[type]; tc.appendChild(badge); });
     const fb = document.getElementById("feedback"); const fbMain = document.getElementById("feedback-main");
