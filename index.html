@@ -15,8 +15,8 @@
     <!-- INTRO OVERLAY -->
     <div id="intro-overlay">
         <button id="start-btn" onclick="playIntro()">▶ Training Starten</button>
-        <!-- 'muted' wurde hier entfernt, damit das Video mit Ton läuft! -->
-        <video id="intro-video" src="https://github.com/stenjanosch-cmd/PogoApp/blob/main/Professional_Pok%C3%A9mon_battle_stadium_1080p_202607161353.mp4?raw=true" playsinline preload="auto"></video>
+        <!-- CDN-Link für sauberes Streaming auf allen Geräten, 'playsinline' ist Pflicht für iOS/Smartphones -->
+        <video id="intro-video" src="https://cdn.jsdelivr.net/gh/stenjanosch-cmd/PogoApp/Professional_Pok%C3%A9mon_battle_stadium_1080p_202607161353.mp4" playsinline preload="auto"></video>
     </div>
 
     <div class="container">
@@ -75,7 +75,7 @@
                 <div id="willow-overlay" onclick="closeWillow()">
                     <div class="willow-container">
                         <div class="willow-speech" id="willow-text">Text</div>
-                        <img class="willow-img" src="https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/150px-Professor_Willow.png?raw=true" alt="Prof Willow">
+                        <img class="willow-img" src="150px-Professor_Willow.png" alt="Prof Willow">
                     </div>
                     <div style="font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 15px; font-weight: bold; text-transform: uppercase;">(Tippen zum Fortfahren)</div>
                 </div>
