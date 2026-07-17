@@ -2,36 +2,50 @@
 // DATEI: app.js
 // ==============================================
 
+// --- 1. SERVICE WORKER KILLER ---
+// (Löscht den alten Cache aktiv vom Handy/PC, damit Updates sofort laden)
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(err => console.error('Service Worker Fehler', err));
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+            registration.unregister(); 
+        }
+    });
 }
 
-// --- Intro Logik (Absolut stabil) ---
+// --- 2. INTRO LOGIK MIT NOTAUS ---
 function playIntro() {
     const overlay = document.getElementById('intro-overlay');
     const video = document.getElementById('intro-video');
     const startBtn = document.getElementById('start-btn');
 
-    overlay.style.display = "flex";
-    video.style.display = "block";
-    video.style.opacity = "1";
     startBtn.style.display = 'none';
+    video.style.display = 'block';
+    video.style.opacity = '1';
 
-    video.pause();
-    video.currentTime = 0;
     video.muted = false; 
-    video.load();
+    video.currentTime = 0;
+
+    // Der Notaus: Wenn das Video nach 2 Sekunden nicht läuft (Blackscreen), wird es abgebrochen.
+    let failsafeTimer = setTimeout(() => {
+        console.warn("Video lädt zu langsam, überspringe...");
+        closeIntro();
+    }, 2000);
 
     let playPromise = video.play();
+    
     if (playPromise !== undefined) {
-        playPromise.catch(err => {
-            console.error("Video konnte nicht abgespielt werden:", err);
+        playPromise.then(() => {
+            // Video läuft, Notaus abbrechen
+            clearTimeout(failsafeTimer);
+        }).catch(err => {
+            console.error("Video blockiert:", err);
+            clearTimeout(failsafeTimer);
             closeIntro(); 
         });
     }
 
-    overlay.onclick = () => closeIntro();
-    video.onended = () => closeIntro();
+    video.onended = closeIntro;
+    overlay.onclick = closeIntro;
 }
 
 function closeIntro() {
@@ -39,15 +53,15 @@ function closeIntro() {
     const video = document.getElementById('intro-video');
     
     video.pause();
-    video.currentTime = 0; 
     video.style.opacity = '0';
+    
     setTimeout(() => {
         overlay.style.display = 'none';
         video.style.display = 'none';
-    }, 500);
+    }, 300);
 }
 
-// --- Dynamische Hintergründe (Relative Pfade anhand deiner Liste) ---
+// --- Dynamische Hintergründe (Relative Pfade) ---
 function setDynamicBackground(screenId, mode) {
     let bg = 'Pokemon_world_landscape_rolling_…_202607141413.jpeg'; 
     if (screenId === 'screen-sort') bg = 'Pokémon_storage_room_UI_202607161335.jpeg';
