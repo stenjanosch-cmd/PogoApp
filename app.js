@@ -1,15 +1,44 @@
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.error('Service Worker Fehler', err));
 }
+
+// NEUE, STABILE INTRO-FUNKTION
 function playIntro() {
     const overlay = document.getElementById('intro-overlay');
     const video = document.getElementById('intro-video');
+    
     document.getElementById('start-btn').style.display = 'none';
     video.style.opacity = '1';
-    video.currentTime = 0; // Spult das Video bei jedem Start auf Sekunde 0 zurück
-    video.play();
-    video.onended = () => { video.style.opacity = '0'; setTimeout(() => overlay.style.display = 'none', 1000); };
+    video.currentTime = 0; // Spult sicherheitshalber immer an den Anfang
+    
+    // Fallback, falls das Video gar nicht erst lädt (verhindert Blackscreen)
+    video.onerror = () => {
+        overlay.style.display = 'none';
+    };
+
+    try {
+        // Moderne Promise-basierte Play-Methode
+        let playPromise = video.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                // Video spielt erfolgreich ab
+            }).catch(error => {
+                // Wenn der Browser das Video blockiert, schließe das Overlay sofort!
+                console.log("Auto-Play blockiert, überspringe Intro.");
+                overlay.style.display = 'none';
+            });
+        }
+    } catch(e) {
+        overlay.style.display = 'none';
+    }
+
+    // Wenn das Video fertig ist, schließe das Overlay
+    video.onended = () => { 
+        video.style.opacity = '0'; 
+        setTimeout(() => overlay.style.display = 'none', 500); 
+    };
 }
+
 function setDynamicBackground(screenId, mode) {
     let bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pokemon_world_landscape_rolling_%E2%80%A6_202607141413.jpeg?raw=true';
     if (screenId === 'screen-sort') bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pok%C3%A9mon_storage_room_UI_202607161335.jpeg?raw=true';
