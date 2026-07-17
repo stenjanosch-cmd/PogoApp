@@ -9,10 +9,64 @@
     <link rel="apple-touch-icon" href="https://archives.bulbagarden.net/media/upload/9/93/Bag_Pok%C3%A9_Ball_Sprite.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Righteous&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* CSS für die dynamischen Pokémon im Hintergrund */
+        #bg-animations {
+            position: fixed;
+            top: 0; left: 0; 
+            width: 100vw; height: 100vh;
+            pointer-events: none; /* Man klickt durch sie hindurch */
+            z-index: 9000;
+            overflow: hidden;
+        }
+        .poke-move-wrapper {
+            position: absolute;
+            pointer-events: none;
+            will-change: transform;
+        }
+        .poke-fly, .poke-walk {
+            display: block;
+            width: auto;
+            /* Volle Farbe plus schicker Schatten für Dreidimensionalität */
+            filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.7)); 
+        }
+        
+        /* Die Wipp-Animation für Läufer (simuliert schnelle Schritte) */
+        .poke-walk {
+            animation: bobbing 0.25s infinite alternate; 
+        }
+        /* Die Wellen-Animation für Flieger */
+        .poke-fly {
+            animation: floating 2s ease-in-out infinite alternate;
+        }
+        
+        /* Horizontale Bewegung */
+        @keyframes moveRight {
+            0% { transform: translateX(-200px); }
+            100% { transform: translateX(calc(100vw + 200px)); }
+        }
+        @keyframes moveLeft {
+            0% { transform: translateX(calc(100vw + 200px)); }
+            100% { transform: translateX(-200px); }
+        }
+        
+        /* Vertikale Bewegungen */
+        @keyframes bobbing {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-12px); }
+        }
+        @keyframes floating {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-35px); }
+        }
+    </style>
 </head>
 <body>
 
-    <!-- NEUER VOLLBILD-BUTTON UNTEN LINKS -->
+    <!-- CONTAINER FÜR ANIMIERTE POKEMON -->
+    <div id="bg-animations"></div>
+
     <button id="fullscreen-btn" onclick="toggleFullscreen()" style="position: fixed; bottom: 20px; left: 20px; z-index: 9999; background: rgba(0,0,0,0.7); color: white; border: 2px solid #3498db; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">🔲</button>
 
     <button id="mute-btn" onclick="toggleMute()" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.7); color: white; border: 2px solid #ffcb05; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">🔊</button>
@@ -134,8 +188,10 @@
         </div>
     </div>
 
+    <!-- DIE SKRIPTE IN DER RICHTIGEN REIHENFOLGE -->
     <script src="app.js"></script>
     <script src="game-sortieren.js"></script>
     <script src="media.js"></script>
+    <script src="spawner.js"></script> <!-- HIER wird der neue Code geladen! -->
 </body>
 </html>
