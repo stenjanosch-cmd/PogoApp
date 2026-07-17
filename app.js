@@ -2,40 +2,59 @@
 // DATEI: app.js
 // ==============================================
 
-// --- PWA Service Worker Registrierung ---
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.error('Service Worker Fehler', err));
 }
 
-// --- Intro Logik (Sauberes Backup) ---
+// --- Intro Logik (Absolut stabil) ---
 function playIntro() {
     const overlay = document.getElementById('intro-overlay');
     const video = document.getElementById('intro-video');
-    
-    document.getElementById('start-btn').style.display = 'none';
-    video.style.opacity = '1';
-    video.play();
-    
-    // Simpler Notfall-Ausweg: Ein Tippen auf den Bildschirm überspringt das Video sofort, falls es mal hängen sollte.
-    overlay.onclick = () => {
-        video.pause();
-        video.style.opacity = '0';
-        overlay.style.display = 'none';
-    };
+    const startBtn = document.getElementById('start-btn');
 
-    video.onended = () => { 
-        video.style.opacity = '0'; 
-        setTimeout(() => overlay.style.display = 'none', 1000); 
-    };
+    overlay.style.display = "flex";
+    video.style.display = "block";
+    video.style.opacity = "1";
+    startBtn.style.display = 'none';
+
+    video.pause();
+    video.currentTime = 0;
+    video.muted = false; 
+    video.load();
+
+    let playPromise = video.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(err => {
+            console.error("Video konnte nicht abgespielt werden:", err);
+            closeIntro(); 
+        });
+    }
+
+    overlay.onclick = () => closeIntro();
+    video.onended = () => closeIntro();
 }
 
-// --- Dynamische Hintergründe ---
+function closeIntro() {
+    const overlay = document.getElementById('intro-overlay');
+    const video = document.getElementById('intro-video');
+    
+    video.pause();
+    video.currentTime = 0; 
+    video.style.opacity = '0';
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        video.style.display = 'none';
+    }, 500);
+}
+
+// --- Dynamische Hintergründe (Relative Pfade anhand deiner Liste) ---
 function setDynamicBackground(screenId, mode) {
-    let bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pokemon_world_landscape_rolling_%E2%80%A6_202607141413.jpeg?raw=true';
-    if (screenId === 'screen-sort') bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pok%C3%A9mon_storage_room_UI_202607161335.jpeg?raw=true';
-    else if (screenId === 'screen-game' && ['attack','defend','guess','weather'].includes(mode)) bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pok%C3%A9mon_training_gym_interior_202607161334.jpeg?raw=true';
-    else if (screenId === 'screen-game' && ['rocket','radar','hardcore'].includes(mode)) bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pok%C3%A9mon_battle_stadium_combat_field_202607161335.jpeg?raw=true';
-    else if (screenId === 'screen-cheatsheet' || screenId === 'screen-pokedex') bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Tools_and_Sammlung_room_202607161335.jpeg?raw=true';
+    let bg = 'Pokemon_world_landscape_rolling_…_202607141413.jpeg'; 
+    if (screenId === 'screen-sort') bg = 'Pokémon_storage_room_UI_202607161335.jpeg';
+    else if (screenId === 'screen-game' && ['attack','defend','guess','weather'].includes(mode)) bg = 'Pokémon_training_gym_interior_202607161334.jpeg';
+    else if (screenId === 'screen-game' && ['rocket','radar','hardcore'].includes(mode)) bg = 'Pokémon_battle_stadium_combat_field_202607161335.jpeg';
+    else if (screenId === 'screen-cheatsheet' || screenId === 'screen-pokedex') bg = 'Tools_and_Sammlung_room_202607161335.jpeg';
+    
     document.body.style.backgroundImage = `url('${bg}')`;
 }
 
@@ -45,8 +64,8 @@ const iconPremierball = `<img src="https://archives.bulbagarden.net/media/upload
 const iconHyperball = `<img src="https://archives.bulbagarden.net/media/upload/1/1c/Bag_Ultra_Ball_Sprite.png" width="16" style="vertical-align: middle;">`;
 
 // --- Speicher & Level System ---
-let trainerXp = parseInt(localStorage.getItem('pogo_xp_v6')) || 0;
-let pokedex = JSON.parse(localStorage.getItem('pogo_dex_v6')) || {};
+let trainerXp = parseInt(localStorage.getItem('pogo_xp_v7')) || 0;
+let pokedex = JSON.parse(localStorage.getItem('pogo_dex_v7')) || {};
 
 const titlesArr = [{ lvl: 1, name: "Pokémon-Fan" }, { lvl: 5, name: "Käfersammler" }, { lvl: 10, name: "Pfadfinder" }, { lvl: 15, name: "Teenager" }, { lvl: 20, name: "Schwarzgurt" }, { lvl: 30, name: "Veteran" }, { lvl: 40, name: "Ass-Trainer" }, { lvl: 50, name: "Arenaleiter" }, { lvl: 75, name: "Top-Vier" }, { lvl: 100, name: "Pokémon-Meister" }];
 
@@ -60,7 +79,7 @@ function updateTrainerCard() {
     document.getElementById('trainer-lvl').innerText = lvl; document.getElementById('trainer-title').innerText = title;
     document.getElementById('xp-fill').style.width = progress + '%'; document.getElementById('xp-text').innerText = `${trainerXp} / ${nextLevelXp} XP`;
 }
-function addXp(amount) { trainerXp += amount; localStorage.setItem('pogo_xp_v6', trainerXp); updateTrainerCard(); }
+function addXp(amount) { trainerXp += amount; localStorage.setItem('pogo_xp_v7', trainerXp); updateTrainerCard(); }
 updateTrainerCard();
 
 function showScreen(screenId) {
@@ -80,10 +99,10 @@ const weatherData = [ { id: 'sunny', name: 'Sonnig/Klar', icon: '☀️', types:
 
 const rocketEncounters = [
     { type: 'grunt', gender: 'M', name: 'Rüpel', quote: 'Meine Käfer-Pokémon sind ein Albtraum!', targetTypes: ['bug'] }, { type: 'grunt', gender: 'F', name: 'Rüpel', quote: 'Keine Gnade!', targetTypes: ['dark'] }, { type: 'grunt', gender: 'M', name: 'Rüpel', quote: 'Brüll!... Wie hört sich das an?', targetTypes: ['dragon'] }, { type: 'grunt', gender: 'F', name: 'Rüpel', quote: 'Hier kommt ein Schocker!', targetTypes: ['electric'] }, { type: 'grunt', gender: 'M', name: 'Rüpel', quote: 'Wirf einen Blick auf meine niedlichen Pokémon!', targetTypes: ['fairy'] }, { type: 'grunt', gender: 'F', name: 'Rüpel', quote: 'Wir sind bereit, zuzuschlagen!', targetTypes: ['fighting'] }, { type: 'grunt', gender: 'M', name: 'Rüpel', quote: 'Bist du bereit für ein heißes Match?', targetTypes: ['fire'] }, { type: 'grunt', gender: 'F', name: 'Rüpel', quote: 'Mein Vogel-Pokémon will mit dir kämpfen!', targetTypes: ['flying'] }, { type: 'grunt', gender: 'M', name: 'Rüpel', quote: 'Unsichtbar und doch da!', targetTypes: ['ghost'] }, { type: 'grunt', gender: 'F', name: 'Rüpel', quote: 'Verstricke dich nicht in meine Angelegenheiten!', targetTypes: ['grass'] }, { type: 'grunt', gender: 'M', name: 'Rüpel', quote: 'Lass dich von uns nicht in den Boden stampfen!', targetTypes: ['ground'] }, { type: 'grunt', gender: 'F', name: 'Rüpel', quote: 'Mach dich bereit für ein eisiges Vergnügen!', targetTypes: ['ice'] }, { type: 'grunt', gender: 'M', name: 'Rüpel', quote: 'Normal lässt sich nicht unterkriegen!', targetTypes: ['normal'] }, { type: 'grunt', gender: 'F', name: 'Rüpel', quote: 'Gift ist meine Spezialität!', targetTypes: ['poison'] }, { type: 'grunt', gender: 'M', name: 'Rüpel', quote: 'Bist du bereit, in ein schwarzes Loch zu blicken?', targetTypes: ['psychic'] }, { type: 'grunt', gender: 'F', name: 'Rüpel', quote: 'Du wirst auf Granit beißen!', targetTypes: ['rock'] }, { type: 'grunt', gender: 'M', name: 'Rüpel', quote: 'Eisenhart!', targetTypes: ['steel'] }, { type: 'grunt', gender: 'F', name: 'Rüpel', quote: 'Diese Gewässer sind tückisch!', targetTypes: ['water'] },
-    { type: 'boss', initial: 'G', img: 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Giovanni.png?raw=true', name: 'Giovanni', quote: 'Ich mache dich platt!', leads: [{name: 'Snobilikat', types: ['normal']}] }, 
-    { type: 'boss', initial: 'C', img: 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Cliffs.png?raw=true', name: 'Cliff', quote: 'Meine Stärke ist unübertroffen.', leads: [{name: 'Aerodactyl', types: ['rock','flying']}, {name: 'Machollo', types: ['fighting']}, {name: 'Larvitar', types: ['rock','ground']}] }, 
-    { type: 'boss', initial: 'S', img: 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Sierras.png?raw=true', name: 'Sierra', quote: 'Wir werden dich vernichten!', leads: [{name: 'Kramurx', types: ['dark','flying']}, {name: 'Sniebel', types: ['dark','ice']}, {name: 'Hunduster', types: ['dark','fire']}] }, 
-    { type: 'boss', initial: 'A', img: 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Arlos.png?raw=true', name: 'Arlo', quote: 'Du hast keine Chance.', leads: [{name: 'Kindwurm', types: ['dragon']}, {name: 'Tannza', types: ['bug']}, {name: 'Skorgla', types: ['ground','flying']}] }
+    { type: 'boss', initial: 'G', img: 'Giovanni.png', name: 'Giovanni', quote: 'Ich mache dich platt!', leads: [{name: 'Snobilikat', types: ['normal']}] }, 
+    { type: 'boss', initial: 'C', img: 'Cliffs.png', name: 'Cliff', quote: 'Meine Stärke ist unübertroffen.', leads: [{name: 'Aerodactyl', types: ['rock','flying']}, {name: 'Machollo', types: ['fighting']}, {name: 'Larvitar', types: ['rock','ground']}] }, 
+    { type: 'boss', initial: 'S', img: 'Sierras.png', name: 'Sierra', quote: 'Wir werden dich vernichten!', leads: [{name: 'Kramurx', types: ['dark','flying']}, {name: 'Sniebel', types: ['dark','ice']}, {name: 'Hunduster', types: ['dark','fire']}] }, 
+    { type: 'boss', initial: 'A', img: 'Arlos.png', name: 'Arlo', quote: 'Du hast keine Chance.', leads: [{name: 'Kindwurm', types: ['dragon']}, {name: 'Tannza', types: ['bug']}, {name: 'Skorgla', types: ['ground','flying']}] }
 ];
 
 function startGame(mode) {
@@ -166,8 +185,8 @@ function fetchRocketEncounter() {
     const avatar = document.getElementById("rocket-avatar");
     
     if (currentRocket.type === 'grunt') {
-        const mImgs = ['https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Male_Team_Rocket_Grunt_Pok%C3%A9mon_202607161318.jpeg?raw=true', 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Male_Team_Rocket_Grunt_standing_202607161318.jpeg?raw=true'];
-        const fImgs = ['https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Female_Team_Rocket_Grunt_Pok%C3%A9mon%E2%80%A6_202607161318.jpeg?raw=true', 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Female_Team_Rocket_Grunt_standing_202607161318.jpeg?raw=true'];
+        const mImgs = ['Male_Team_Rocket_Grunt_Pokémon_202607161318.jpeg', 'Male_Team_Rocket_Grunt_standing_202607161318.jpeg'];
+        const fImgs = ['Female_Team_Rocket_Grunt_Pokémon…_202607161318.jpeg', 'Female_Team_Rocket_Grunt_standing_202607161318.jpeg'];
         imgEl.src = currentRocket.gender === 'M' ? mImgs[Math.floor(Math.random()*2)] : fImgs[Math.floor(Math.random()*2)];
         currentPokemonTypes = currentRocket.targetTypes;
         imgEl.style.display = "block";
@@ -238,7 +257,7 @@ function checkRadarAnswer(selected, correct) {
     const fb = document.getElementById("feedback"); const fbMain = document.getElementById("feedback-main");
     fb.style.display = "block"; document.getElementById("next-btn").style.display = "inline-block";
     if(selected.toLowerCase() === correct.toLowerCase()) { 
-        if (!pokedex[currentPokemonId]) { pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId }; localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); } 
+        if (!pokedex[currentPokemonId]) { pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId }; localStorage.setItem('pogo_dex_v7', JSON.stringify(pokedex)); } 
         addXp(20);
         fbMain.innerHTML = `Gefangen! ${iconPokeball}<br>Es ist ${correct}! (+20 XP)`; fb.style.backgroundColor = "rgba(46, 204, 113, 0.7)"; fb.style.border = "2px solid #2ecc71"; 
     } 
@@ -260,7 +279,7 @@ function checkAnswer(userSelectedType) {
             if (guessedTypesArray.length === currentPokemonTypes.length) { 
                 if(firstAttempt) { 
                     catchPrefix = `Perfekt! ${iconPokeball}<br>`; 
-                    if (!pokedex[currentPokemonId]) { pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId }; localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); } 
+                    if (!pokedex[currentPokemonId]) { pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId }; localStorage.setItem('pogo_dex_v7', JSON.stringify(pokedex)); } 
                     addXp(15); 
                     firstAttempt=false; 
                 } 
@@ -294,7 +313,7 @@ function checkAnswer(userSelectedType) {
     const displayMult = multiplier.toFixed(2).replace('.00', '');
     let usedBall = iconPokeball; if (currentMode === 'rocket') usedBall = iconPremierball; if (currentMode === 'hardcore') usedBall = iconHyperball;
 
-    if (firstAttempt && currentMode !== 'rocket' && currentMode !== 'weather') { if (isSuccess) { catchPrefix = `Gefangen! ${usedBall}<br>`; if (!pokedex[currentPokemonId]) { pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId }; localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); } } else if (!isSuccess) { catchPrefix = "❌ Geflüchtet...<br>"; } } 
+    if (firstAttempt && currentMode !== 'rocket' && currentMode !== 'weather') { if (isSuccess) { catchPrefix = `Gefangen! ${usedBall}<br>`; if (!pokedex[currentPokemonId]) { pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId }; localStorage.setItem('pogo_dex_v7', JSON.stringify(pokedex)); } } else if (!isSuccess) { catchPrefix = "❌ Geflüchtet...<br>"; } } 
     else if (firstAttempt && currentMode === 'rocket') { if (isSuccess) catchPrefix = `Besiegt! ${usedBall}<br>`; else catchPrefix = "❌ Du wurdest besiegt...<br>"; }
 
     if (isSuccess) {
