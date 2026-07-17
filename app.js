@@ -2,6 +2,46 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.error('Service Worker Fehler', err));
 }
 
+// --- FULLSCREEN LOGIK ---
+function toggleFullscreen() {
+    let elem = document.documentElement;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => console.log(err));
+        } else if (elem.webkitRequestFullscreen) { /* Safari */
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) { /* IE11 */
+            elem.msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { /* Safari */
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) { /* IE11 */
+            document.msExitFullscreen();
+        }
+    }
+}
+
+function updateFullscreenButton() {
+    const btn = document.getElementById('fullscreen-btn');
+    if(btn) {
+        if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+            btn.innerHTML = '✖️'; 
+            btn.style.borderColor = '#e74c3c';
+        } else {
+            btn.innerHTML = '🔲';
+            btn.style.borderColor = '#3498db';
+        }
+    }
+}
+
+document.addEventListener('fullscreenchange', updateFullscreenButton);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+document.addEventListener('msfullscreenchange', updateFullscreenButton);
+// ------------------------
+
 function playIntro() {
     if (typeof initAudio === 'function') initAudio();
 
@@ -105,13 +145,11 @@ function renderCheatResult(selectedType) {
     let defWeak = []; let defRes = []; let defImmune = [];
     
     Object.keys(typeTranslations).forEach(defType => {
-        // Angreifer Perspektive
         let atkMult = typeChart[selectedType] && typeChart[selectedType][defType] !== undefined ? typeChart[selectedType][defType] : 1;
         if(atkMult > 1) atkEff.push(`${typeTranslations[defType]}`);
         if(atkMult === 0.625) atkWeak.push(`${typeTranslations[defType]}`);
         if(atkMult < 0.625) atkImmune.push(`${typeTranslations[defType]} (${atkMult}x)`);
         
-        // Verteidiger Perspektive
         let defMult = typeChart[defType] && typeChart[defType][selectedType] !== undefined ? typeChart[defType][selectedType] : 1;
         if(defMult > 1) defWeak.push(`${typeTranslations[defType]}`);
         if(defMult === 0.625) defRes.push(`${typeTranslations[defType]}`);
@@ -120,7 +158,6 @@ function renderCheatResult(selectedType) {
 
     let html = `<h3 style="color:${typeColors[selectedType]}; margin-bottom: 5px;">${typeTranslations[selectedType].toUpperCase()}</h3>`;
     
-    // ANGREIFER
     html += `<div style="font-size:11px; color:#aaa; margin-top:5px; font-weight:bold; text-decoration:underline;">Als Angreifer (teilt Schaden aus):</div>`;
     html += `<div class="cheat-row">⚔️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Sehr effektiv (1.6x):</span> <span class="good">${atkEff.length>0 ? atkEff.join(', ') : '-'}</span></div>`;
     html += `<div class="cheat-row">⚔️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Wenig effektiv (0.625x):</span> <span class="bad">${atkWeak.length>0 ? atkWeak.join(', ') : '-'}</span></div>`;
@@ -128,7 +165,6 @@ function renderCheatResult(selectedType) {
     
     html += `<hr style="border-color: rgba(255,255,255,0.1); margin: 8px 0;">`;
     
-    // VERTEIDIGER
     html += `<div style="font-size:11px; color:#aaa; font-weight:bold; text-decoration:underline;">Als Verteidiger (steckt Schaden ein):</div>`;
     html += `<div class="cheat-row">🛡️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Schwach gegen (1.6x):</span> <span class="bad">${defWeak.length>0 ? defWeak.join(', ') : '-'}</span></div>`;
     html += `<div class="cheat-row">🛡️ <span style="font-size:10px; color:#ddd; font-weight:bold;">Resistiert (0.625x):</span> <span class="good">${defRes.length>0 ? defRes.join(', ') : '-'}</span></div>`;
@@ -160,7 +196,6 @@ function resetUI() {
     firstAttempt = true; guessedTypesArray = []; 
     document.getElementById("loading").style.display = "block"; 
     
-    // Bild-Reset (Entfernt Radar-Effekte für normale Modi)
     const pokeImg = document.getElementById("pokemon-image");
     pokeImg.style.display = "none"; 
     pokeImg.classList.remove('silhouette'); 
@@ -220,7 +255,6 @@ async function fetchRandomPokemon() {
         
         if(currentMode === 'radar') {
             pokeImg.classList.add('silhouette'); 
-            // Hier kommt der starke weiße Schattenriss und die Vergrößerung!
             pokeImg.style.filter = "brightness(0) drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(2px 2px 0 #fff) drop-shadow(-2px -2px 0 #fff) drop-shadow(2px -2px 0 #fff) drop-shadow(-2px 2px 0 #fff)";
             pokeImg.style.transform = "scale(1.3)";
             
