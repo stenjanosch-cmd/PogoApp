@@ -1,17 +1,28 @@
 let stardust = parseInt(localStorage.getItem('pogo_stardust')) || 0;
 let activeExpeditions = JSON.parse(localStorage.getItem('pogo_expeditions')) || {};
 
-const EXP_DURATION = 10 * 60 * 1000; // 10 Minuten
+const EXP_DURATION = 10 * 60 * 1000; // 10 Minuten pro Mission
 
 const biomes = {
-    vulkan: { name: "Vulkan", types: ["fire", "rock"], baseDust: 150 },
-    tiefsee: { name: "Tiefsee", types: ["water", "ice"], baseDust: 150 },
-    spukwald: { name: "Spukwald", types: ["ghost", "poison"], baseDust: 150 },
-    kraftwerk: { name: "Kraftwerk", types: ["electric", "steel"], baseDust: 150 }
+    vulkan: { name: "Vulkan", types: ["fire", "rock"], color1: "#EE8130", color2: "#B6A136", icon: "fire", baseDust: 150 },
+    tiefsee: { name: "Tiefsee", types: ["water", "ice"], color1: "#6390F0", color2: "#96D9D6", icon: "water", baseDust: 150 },
+    spukwald: { name: "Spukwald", types: ["ghost", "poison"], color1: "#735797", color2: "#A33EA1", icon: "ghost", baseDust: 150 },
+    kraftwerk: { name: "Kraftwerk", types: ["electric", "steel"], color1: "#F7D02C", color2: "#B7B7CE", icon: "electric", baseDust: 150 }
 };
 
 let currentBiomeSelect = null;
 let campTimer = null;
+
+// --- EIGENER WILLOW POPUP FÜRS CAMP ---
+function showCampWillow(text) {
+    document.getElementById('camp-willow-text').innerHTML = text;
+    document.getElementById('camp-willow-overlay').style.display = 'flex';
+}
+
+function closeCampWillow() {
+    document.getElementById('camp-willow-overlay').style.display = 'none';
+}
+// --------------------------------------
 
 function initCamp() {
     updateStardustDisplay();
@@ -44,7 +55,6 @@ function renderBiomes() {
         const b = biomes[biomeId];
         const exp = activeExpeditions[biomeId];
         
-        // Generiert die offiziellen Typ-Badges in Pokémon GO Optik
         let badgesHTML = b.types.map(t => {
             return `<div class="biome-type-badge" style="background-color: ${typeColors[t]};">
                         <img src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${t}.svg">
@@ -93,7 +103,6 @@ function renderBiomes() {
 function openPokemonSelect(biomeId) {
     currentBiomeSelect = biomeId;
     
-    // Fallback: Holt Daten sicher
     const dex = (typeof pokedex !== 'undefined') ? pokedex : (JSON.parse(localStorage.getItem('pogo_dex_v6')) || {});
     const grid = document.getElementById('camp-select-grid');
     grid.innerHTML = '';
@@ -101,32 +110,29 @@ function openPokemonSelect(biomeId) {
     
     let count = 0;
     
-    // Die Schleife ist jetzt extrem fehlertolerant gebaut
     for (let id in dex) {
         let pkm = dex[id];
         if(!pkm) continue;
         
-        // Fallback falls der Import korrupt ist
         let pName = pkm.name || 'Unbekannt';
         let pImg = pkm.img || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
         
-        // Strikte String-Prüfung, um Fehler bei unterschiedlichen Daten-Typen zu vermeiden
         const isBusy = Object.values(activeExpeditions).some(e => String(e.pkmId) === String(id));
         
         if(!isBusy) {
             count++;
             const div = document.createElement('div');
-            // Nutzt exakt dein Pokedex-Klassen-Design für 100% korrekte Darstellung!
             div.className = 'dex-entry caught'; 
             div.style.cursor = 'pointer';
             div.style.boxShadow = "0 4px 6px rgba(0,0,0,0.5)";
+            
             div.onclick = () => startExpedition(biomeId, id);
             
             div.innerHTML = `
-                <img class="dex-img" src="${pImg}" alt="Pokemon" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png'">
+                <img class="dex-img" src="${pImg}" alt="${pName}" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png'">
                 <div class="dex-id">#${id}</div>
                 <div class="dex-name">${pName}</div>
-                <div style="background: #2ecc71; color: white; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 4px; margin-top: 8px; text-transform: uppercase;">Aussenden</div>
+                <div style="background: #2ecc71; color: white; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 4px; margin-top: 8px; text-transform: uppercase; pointer-events: none;">Aussenden</div>
             `;
             grid.appendChild(div);
         }
@@ -144,7 +150,6 @@ function openPokemonSelect(biomeId) {
         `;
     }
     
-    // Nutzt das native App-Routing anstelle des Modals!
     showScreen('screen-camp-select');
 }
 
@@ -172,7 +177,7 @@ async function startExpedition(biomeId, pkmId) {
         showScreen('screen-camp');
         renderBiomes();
     } catch(e) {
-        alert("Fehler beim Laden aus der PokeAPI. Bitte nochmal versuchen.");
+        showCampWillow("Mein Radar ist gestört! Es gab einen Netzwerkfehler bei der Verbindung zum Pokédex. Bitte versuche es gleich noch einmal.");
         openPokemonSelect(biomeId);
     }
 }
@@ -200,14 +205,14 @@ function resolveExpedition(biomeId) {
     }
     
     if (incomingDamage > 1) {
-        alert(`Fatale Schwäche! Dein Pokémon wurde vom Biom überwältigt und ist ohne Sternenstaub geflüchtet.`);
+        showCampWillow(`Oh nein! Das Biom war zu gefährlich für dein Teammitglied. Es hatte eine gravierende Schwäche gegen diese Umgebung und musste ohne Sternenstaub flüchten. Achte nächstes Mal besser auf die Typ-Effektivität!`);
     } else if (outgoingDamage > 1) {
         let earned = b.baseDust * 2;
         stardust += earned;
-        alert(`Perfekter Konter! Dein Pokémon hat die Zone dominiert. Du erhältst ${earned} ✨!`);
+        showCampWillow(`Hervorragende Wahl, Trainer! Dein Pokémon hatte den perfekten Typ-Vorteil und hat die Zone komplett dominiert. Es bringt sensationelle <b>${earned} ✨</b> mit!`);
     } else {
         stardust += b.baseDust;
-        alert(`Expedition erfolgreich. Dein Pokémon hat ${b.baseDust} ✨ gefunden.`);
+        showCampWillow(`Gute Arbeit! Die Expedition war solide und erfolgreich. Dein Teammitglied ist sicher zurück und hat <b>${b.baseDust} ✨</b> gesammelt.`);
     }
     
     delete activeExpeditions[biomeId];
@@ -223,7 +228,7 @@ let currentShopEncounterBaseId = "";
 
 async function buyLure() {
     if(stardust < 500) {
-        alert("Du hast nicht genug Sternenstaub!");
+        showCampWillow("Da fehlt uns leider noch das Material! Du benötigst <b>500 ✨ Sternenstaub</b>, um ein Lockmodul zu aktivieren. Schick dein Team auf weitere Expeditionen!");
         return;
     }
     
@@ -234,7 +239,7 @@ async function buyLure() {
     }
     
     if(missing.length === 0) {
-        alert("Dein Pokédex ist komplett! Wahnsinn!");
+        showCampWillow("Unglaublich! Dein Pokédex ist bereits vollständig. Ein Lockmodul würde hier nichts Neues mehr anlocken. Du bist ein wahrer Pokémon-Meister!");
         return;
     }
     
@@ -273,7 +278,7 @@ async function buyLure() {
         document.getElementById('camp-encounter-btn').style.display = 'block';
         
     } catch (e) {
-        alert("Netzwerk-Fehler beim Anlocken!");
+        showCampWillow("Das Lockmodul klemmt! Es gab einen Netzwerkfehler. Ich habe dir deinen Sternenstaub sicherheitshalber zurückerstattet.");
         document.getElementById('camp-encounter-area').style.display = 'none';
         stardust += 500; 
         updateStardustDisplay();
