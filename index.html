@@ -78,13 +78,16 @@
         
         .screen.active.camp-select-layout { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
+        /* --- NEUE CAMP TYP-ICONS CSS --- */
+        .camp-select-types { display: flex; justify-content: center; gap: 5px; margin-top: 6px; min-height: 20px; }
+        .camp-select-type-icon { width: 14px; height: 14px; border-radius: 50%; padding: 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
-    <!-- Das Willow Overlay wurde komplett aus allen Containern befreit und ans Hauptfenster gekettet. 
-         So ignoriert es alle Scroll-Bereiche und ist IMMER fest auf dem Display sichtbar. -->
+    <!-- Das Willow Overlay ans Hauptfenster gekettet. -->
     <div id="camp-willow-overlay" onclick="closeCampWillow()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(13, 27, 42, 0.9); z-index: 99999; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px);">
         <div style="background: white; color: #2c3e50; padding: 15px; border-radius: 15px; font-weight: bold; font-size: 14px; line-height: 1.4; text-align: center; max-width: 280px; width: 100%; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
             <div id="camp-willow-text">Text...</div>

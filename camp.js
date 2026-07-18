@@ -2,7 +2,6 @@ let stardust = parseInt(localStorage.getItem('pogo_stardust')) || 0;
 
 const EXP_DURATION = 10 * 60 * 1000; // 10 Minuten pro Mission
 
-// 12 verschiedene Zonen, aus denen das System dynamisch auswählt
 const biomeTemplates = [
     { name: "Vulkan", types: ["fire", "rock"], color1: "#EE8130", color2: "#B6A136", icon: "fire", baseDust: 150 },
     { name: "Tiefsee", types: ["water", "ice"], color1: "#6390F0", color2: "#96D9D6", icon: "water", baseDust: 150 },
@@ -18,11 +17,9 @@ const biomeTemplates = [
     { name: "Drachenhort", types: ["dragon", "fire"], color1: "#6F35FC", color2: "#EE8130", icon: "dragon", baseDust: 150 }
 ];
 
-// Neues Versions-Management, damit alte Datenstrukturen die App nicht crashen
 let activeBiomes = JSON.parse(localStorage.getItem('pogo_active_biomes_v3'));
 let activeExpeditions = JSON.parse(localStorage.getItem('pogo_expeditions_v3')) || {};
 
-// Erstmalige Zuweisung der 4 Start-Zonen
 if (!activeBiomes) {
     activeBiomes = {
         zone1: biomeTemplates[0],
@@ -31,7 +28,6 @@ if (!activeBiomes) {
         zone4: biomeTemplates[3]
     };
     localStorage.setItem('pogo_active_biomes_v3', JSON.stringify(activeBiomes));
-    // Alte, inkompatible Expeditions-Daten löschen, um Abstürze zu vermeiden
     localStorage.removeItem('pogo_expeditions');
 }
 
@@ -153,10 +149,21 @@ function openPokemonSelect(zoneId) {
             
             div.onclick = () => startExpedition(zoneId, id);
             
+            let typeHtml = '';
+            // Prüft, ob wir die Typen schon beim Fangen mitgespeichert haben
+            if (pkm.types && Array.isArray(pkm.types)) {
+                typeHtml = pkm.types.map(t => `<img class="camp-select-type-icon" style="background-color: ${typeColors[t]};" src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${t}.svg" title="${typeTranslations[t]}">`).join('');
+            } else {
+                // Typen fehlen (altes Speicherformat). Platzhalter anzeigen und im Hintergrund nachladen.
+                typeHtml = `<span style="font-size: 9px; color: #aaa; text-transform: uppercase;">Lade...</span>`;
+                fetchPokemonTypes(id); 
+            }
+            
             div.innerHTML = `
                 <img class="dex-img" src="${pImg}" alt="${pName}" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png'">
                 <div class="dex-id">#${id}</div>
                 <div class="dex-name">${pName}</div>
+                <div class="camp-select-types" id="camp-types-${id}">${typeHtml}</div>
                 <div style="background: #2ecc71; color: white; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 4px; margin-top: 8px; text-transform: uppercase; pointer-events: none;">Aussenden</div>
             `;
             grid.appendChild(div);
@@ -207,12 +214,10 @@ async function startExpedition(zoneId, pkmId) {
     }
 }
 
-// Würfelt eine komplett neue Zone aus dem Pool, die aktuell noch nicht aktiv ist
 function rollNewBiome(zoneId) {
     const activeNames = Object.values(activeBiomes).map(b => b.name);
     let available = biomeTemplates.filter(b => !activeNames.includes(b.name));
     
-    // Fallback falls aus irgendeinem Grund alle blockiert sind
     if(available.length === 0) available = biomeTemplates; 
     
     const randomBiome = available[Math.floor(Math.random() * available.length)];
@@ -253,7 +258,6 @@ function resolveExpedition(zoneId) {
         showCampWillow(`Gute Arbeit! Die Expedition in <b>${b.name}</b> war solide und erfolgreich. Dein Teammitglied ist sicher zurück und hat <b>${b.baseDust} ✨</b> für dich gesammelt.`);
     }
     
-    // Löscht die aktuelle Expedition und tauscht die Zone durch eine Neue aus
     delete activeExpeditions[zoneId];
     rollNewBiome(zoneId);
     
@@ -266,6 +270,7 @@ let currentShopEncounterId = null;
 let currentShopEncounterName = "";
 let currentShopEncounterImg = "";
 let currentShopEncounterBaseId = "";
+let currentShopEncounterTypes = []; // Hält die Typen des gefangenen Pokémon
 
 async function buyLure() {
     if(stardust < 500) {
@@ -308,6 +313,7 @@ async function buyLure() {
         
         currentShopEncounterImg = data.sprites.other['official-artwork'].front_default || data.sprites.front_default;
         currentShopEncounterBaseId = data.species.url.split('/').filter(Boolean).pop();
+        currentShopEncounterTypes = data.types.map(t => t.type.name);
         currentShopEncounterId = randomId;
         
         document.getElementById('camp-encounter-loading').style.display = 'none';
@@ -333,7 +339,8 @@ document.getElementById('camp-encounter-btn').onclick = function() {
         pokedex[currentShopEncounterId] = { 
             name: currentShopEncounterName, 
             img: currentShopEncounterImg, 
-            baseId: currentShopEncounterBaseId 
+            baseId: currentShopEncounterBaseId,
+            types: currentShopEncounterTypes 
         };
         localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex));
     }
@@ -347,3 +354,26 @@ document.getElementById('camp-encounter-btn').onclick = function() {
         currentShopEncounterId = null;
     }, 2500);
 };
+
+// --- HILFSFUNKTION FÜR ALTE POKEDEX EINTRÄGE OHNE TYPEN ---
+async function fetchPokemonTypes(id) {
+    try {
+        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+        const data = await res.json();
+        const types = data.types.map(t => t.type.name);
+        
+        let dex = JSON.parse(localStorage.getItem('pogo_dex_v6')) || {};
+        if(dex[id]) {
+            dex[id].types = types;
+            localStorage.setItem('pogo_dex_v6', JSON.stringify(dex));
+            
+            const container = document.getElementById(`camp-types-${id}`);
+            if(container) {
+                container.innerHTML = types.map(t => `<img class="camp-select-type-icon" style="background-color: ${typeColors[t]};" src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${t}.svg" title="${typeTranslations[t]}">`).join('');
+            }
+            if(typeof pokedex !== 'undefined') pokedex = dex; 
+        }
+    } catch(e) {
+        console.error("Typen konnten nicht nachgeladen werden:", e);
+    }
+}
