@@ -11,67 +11,60 @@
     <link rel="stylesheet" href="style.css">
     
     <style>
-        /* CSS für die dynamischen Pokémon im Hintergrund */
+        /* --- SPAWNER CSS --- */
         #bg-animations {
-            position: fixed;
-            top: 0; left: 0; 
-            width: 100vw; height: 100vh;
-            pointer-events: none; /* Man klickt durch sie hindurch */
-            z-index: 9000;
-            overflow: hidden;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9000; overflow: hidden;
         }
-        .poke-move-wrapper {
-            position: absolute;
-            pointer-events: none;
-            will-change: transform;
-        }
-        .poke-fly, .poke-walk {
-            display: block;
-            width: auto;
-            /* Volle Farbe plus schicker Schatten für Dreidimensionalität */
-            filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.7)); 
-        }
+        .poke-move-wrapper { position: absolute; pointer-events: none; }
+        .poke-flip-wrapper { will-change: transform; transition: transform 0.2s; }
+        .poke-fly, .poke-walk { display: block; width: auto; filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.6)); }
+        .poke-walk { animation: bobbing 0.25s infinite alternate linear; }
+        .poke-fly { animation: floating 2s ease-in-out infinite alternate; }
+        @keyframes bobbing { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
+        @keyframes floating { 0% { transform: translateY(0); } 100% { transform: translateY(-25px); } }
+
+        /* --- RADAR LAMPE --- */
+        #pokemon-container { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #radar-lamp { position: absolute; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.7) 30%, rgba(255,255,255,0) 60%); border-radius: 50%; z-index: 0; display: none; pointer-events: none; }
+        .radar-spotlight #radar-lamp { display: block; }
+        #pokemon-image { position: relative; z-index: 1; }
+        .silhouette { filter: drop-shadow(3px 0 0 white) drop-shadow(0 3px 0 white) drop-shadow(-3px 0 0 white) drop-shadow(0 -3px 0 white) brightness(0) !important; }
+
+        /* --- CAMP UI CSS (Professionell) --- */
+        .camp-tabs { display: flex; width: 100%; max-width: 450px; margin: 0 auto 20px auto; background: rgba(0,0,0,0.6); border-radius: 20px; overflow: hidden; padding: 5px; }
+        .camp-tab-btn { flex: 1; padding: 12px; background: transparent; color: #aaa; border: none; font-weight: bold; cursor: pointer; font-family: 'Montserrat', sans-serif; border-radius: 15px; transition: 0.3s; }
+        .camp-tab-btn.active { background: #3498db; color: #fff; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.5); }
+        .camp-tab-content { display: none; flex-direction: column; width: 100%; align-items: center; padding-bottom: 30px; animation: fadeIn 0.3s ease; }
+        .camp-tab-content.active { display: flex; }
+
+        .biome-card { background: #1e272e; border: 2px solid #34495e; border-radius: 16px; width: 95%; max-width: 450px; margin-bottom: 20px; display: flex; flex-direction: column; box-shadow: 0 8px 15px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+        .biome-header { display: flex; align-items: center; padding: 15px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .biome-title { font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 5px; }
+        .biome-type-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+        .biome-type-badge { border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: bold; color: white; display: flex; align-items: center; gap: 5px; text-transform: uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .biome-type-badge img { width: 14px; height: 14px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.8)); }
         
-        /* Die Wipp-Animation für Läufer (simuliert schnelle Schritte) */
-        .poke-walk {
-            animation: bobbing 0.25s infinite alternate; 
-        }
-        /* Die Wellen-Animation für Flieger */
-        .poke-fly {
-            animation: floating 2s ease-in-out infinite alternate;
-        }
+        .biome-body { padding: 15px; text-align: center; }
+        .biome-status { font-weight: 900; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .biome-status.ready { color: #2ecc71; }
+        .biome-status.return { color: #f1c40f; }
+        .biome-status.active { color: #e67e22; }
+
+        .camp-action-btn { background: #3498db; color: #fff; border: none; padding: 12px 25px; border-radius: 25px; font-weight: 900; cursor: pointer; font-family: 'Montserrat', sans-serif; width: 100%; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .camp-action-btn:active { transform: scale(0.95); }
+        .camp-action-btn.disabled { background: #7f8c8d; color: #ccc; cursor: not-allowed; box-shadow: none; }
+        .camp-resolve-btn { background: #2ecc71; color: #fff; border: none; padding: 12px 25px; border-radius: 25px; font-weight: 900; cursor: pointer; font-family: 'Montserrat', sans-serif; width: 100%; animation: pulse 1.5s infinite; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.5); }
         
-        /* Horizontale Bewegung */
-        @keyframes moveRight {
-            0% { transform: translateX(-200px); }
-            100% { transform: translateX(calc(100vw + 200px)); }
-        }
-        @keyframes moveLeft {
-            0% { transform: translateX(calc(100vw + 200px)); }
-            100% { transform: translateX(-200px); }
-        }
-        
-        /* Vertikale Bewegungen */
-        @keyframes bobbing {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-12px); }
-        }
-        @keyframes floating {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-35px); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
-
-    <!-- CONTAINER FÜR ANIMIERTE POKEMON -->
     <div id="bg-animations"></div>
 
     <button id="fullscreen-btn" onclick="toggleFullscreen()" style="position: fixed; bottom: 20px; left: 20px; z-index: 9999; background: rgba(0,0,0,0.7); color: white; border: 2px solid #3498db; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">🔲</button>
-
     <button id="mute-btn" onclick="toggleMute()" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.7); color: white; border: 2px solid #ffcb05; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">🔊</button>
 
-    <!-- INTRO OVERLAY -->
     <div id="intro-overlay">
         <button id="start-btn" onclick="playIntro()">▶ Training Starten</button>
         <video id="intro-video" src="https://cdn.jsdelivr.net/gh/stenjanosch-cmd/PogoApp/Professional_Pok%C3%A9mon_battle_stadium_1080p_202607161353.mp4" playsinline preload="auto"></video>
@@ -112,8 +105,9 @@
 
             <div class="section-title">Tools & Sammlung</div>
             <div class="menu-grid">
-                <button class="menu-btn btn-tools" onclick="showScreen('screen-cheatsheet')">📜 Spickzettel</button>
+                <button class="menu-btn btn-tools" onclick="showScreen('screen-cheatsheet')">📜 Spickzettel 2.0</button>
                 <button class="menu-btn btn-dex" onclick="showPokedex()">📖 Pokédex</button>
+                <button class="menu-btn btn-camp" style="background-color: #27ae60; color: white;" onclick="showScreen('screen-camp')">🏕️ Camp</button>
             </div>
         </div>
 
@@ -154,7 +148,9 @@
                 <div id="timer-display"></div>
             </div>
             <p class="subtitle" id="game-subtitle">Lade...</p>
+            
             <div id="pokemon-container">
+                <div id="radar-lamp"></div>
                 <div id="rocket-speech" class="speech-bubble"></div>
                 <div id="loading">Suche...</div>
                 <img id="rocket-image" src="" alt="Team Rocket">
@@ -164,17 +160,25 @@
                 <div id="pokemon-name"></div>
                 <div id="pokemon-types"></div>
             </div>
+            
             <div class="btn-container" id="buttons"></div>
             <div class="name-options-container" id="name-buttons"></div>
             <div id="feedback"><span id="feedback-main"></span><div id="feedback-reason"></div></div>
             <button id="next-btn" onclick="fetchNextEncounter()">Weiter!</button>
         </div>
 
-        <!-- CHEATSHEET -->
+        <!-- CHEATSHEET 2.0 -->
         <div id="screen-cheatsheet" class="screen">
             <div class="top-nav"><button class="back-btn" onclick="showScreen('screen-menu')">⮌ Menü</button></div>
-            <h1>Spickzettel</h1>
-            <div class="cheat-container"><div class="cheat-select-grid" id="cheat-icons"></div><div class="cheat-result" id="cheat-result"></div></div>
+            <h1>Spickzettel 2.0</h1>
+            <p class="subtitle" style="margin-bottom: 10px; font-size: 13px;">Wähle 1 oder 2 Typen für das komplette Profil.</p>
+            <div class="cheat-container">
+                <div class="cheat-select-grid" id="cheat-icons"></div>
+                <div id="cheat-selected-display" style="display: flex; justify-content: center; align-items: center; margin: 15px 0; min-height: 35px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 10px;">
+                    <span style="color: #aaa; font-style: italic; font-size: 12px;">Kein Typ ausgewählt</span>
+                </div>
+                <div class="cheat-result" id="cheat-result" style="display: none; text-align: left;"></div>
+            </div>
         </div>
 
         <!-- POKEDEX -->
@@ -186,12 +190,72 @@
             <h1>Pokédex</h1>
             <div class="pokedex-grid" id="pokedex-grid"></div>
         </div>
+
+        <!-- CAMP HAUPT-SCREEN -->
+        <div id="screen-camp" class="screen" style="overflow-y: auto;">
+            <div class="top-nav">
+                <button class="back-btn" onclick="showScreen('screen-menu')">⮌ Menü</button>
+                <div style="font-family: 'Righteous'; color: #a29bfe; font-size: 18px;" id="camp-stardust-display">0 ✨</div>
+            </div>
+            
+            <h1>Pokémon Camp</h1>
+            <p class="subtitle" style="margin-bottom: 20px;">Sende dein Team aus oder locke Neue an!</p>
+            
+            <div class="camp-tabs">
+                <button id="tab-btn-expedition" class="camp-tab-btn active" onclick="switchCampTab('expedition')">🗺️ Zonen</button>
+                <button id="tab-btn-shop" class="camp-tab-btn" onclick="switchCampTab('shop')">🛒 Shop</button>
+            </div>
+            
+            <!-- TAB: EXPEDITIONEN -->
+            <div id="camp-tab-expedition" class="camp-tab-content active">
+                <div id="biomes-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+            </div>
+            
+            <!-- TAB: SHOP -->
+            <div id="camp-tab-shop" class="camp-tab-content">
+                <div class="biome-card" style="border-color: #8e44ad;">
+                    <div class="biome-header" style="background: rgba(142, 68, 173, 0.3);">
+                        <div>
+                            <div class="biome-title">Lockmodul ✨</div>
+                            <div style="font-size: 12px; color: #ccc;">Lockt garantiert einen neuen Dex-Eintrag an.</div>
+                        </div>
+                    </div>
+                    <div class="biome-body">
+                        <button class="camp-resolve-btn" style="background: #9b59b6; color: white; width: 100%;" onclick="buyLure()">Aktivieren (500 ✨)</button>
+                    </div>
+                </div>
+                
+                <div id="camp-encounter-area" style="display: none; flex-direction: column; align-items: center; background: rgba(0,0,0,0.8); border: 2px solid #a29bfe; border-radius: 15px; padding: 20px; margin-top: 10px; width: 95%; max-width: 450px; box-shadow: 0 0 15px rgba(162, 155, 254, 0.5);">
+                    <div id="camp-encounter-loading" style="color: white; font-weight: bold; margin-bottom: 10px; display: none;">Signal wird gesendet...</div>
+                    <img id="camp-encounter-img" src="" alt="?" style="width: 150px; height: 150px; filter: drop-shadow(0 0 10px white);">
+                    <div id="camp-encounter-name" style="font-size: 24px; font-weight: 900; color: #ffcb05; margin: 15px 0;">???</div>
+                    <button id="camp-encounter-btn" class="camp-action-btn" style="background-color: #e74c3c; color: white;">Pokéball werfen 🔴</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEUER SCREEN: POKEMON AUSWAHL (100% sicher und robust, kein Modal) -->
+        <div id="screen-camp-select" class="screen" style="overflow-y: auto;">
+            <div class="top-nav">
+                <button class="back-btn" onclick="showScreen('screen-camp')">⮌ Zurück</button>
+                <div style="font-family: 'Righteous'; color: #ffcb05; font-size: 18px;" id="camp-select-title">Team Auswahl</div>
+            </div>
+            
+            <p class="subtitle" style="margin-bottom: 20px;">Welches Pokémon möchtest du auf die Mission schicken?</p>
+            
+            <!-- Verwendet die gleiche bewährte Tabelle wie dein echter Pokédex -->
+            <div class="pokedex-grid" id="camp-select-grid" style="padding: 10px;">
+                <!-- Wird per JS dynamisch und absturzsicher gefüllt -->
+            </div>
+        </div>
+
     </div>
 
-    <!-- DIE SKRIPTE IN DER RICHTIGEN REIHENFOLGE -->
     <script src="app.js"></script>
     <script src="game-sortieren.js"></script>
     <script src="media.js"></script>
-    <script src="spawner.js"></script> <!-- HIER wird der neue Code geladen! -->
+    <script src="cheatsheet.js"></script>
+    <script src="spawner.js"></script>
+    <script src="camp.js"></script>
 </body>
 </html>

@@ -1,0 +1,185 @@
+/* ============================================== */
+/* DATEI: camp.css                                */
+/* ============================================== */
+
+.btn-camp {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    grid-column: span 2;
+    font-size: 14px;
+    border-color: #fff;
+}
+
+.zone-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.zone-card {
+    background: rgba(0,0,0,0.6);
+    border: 2px solid #444;
+    border-radius: 12px;
+    padding: 15px;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.zone-card:active {
+    transform: scale(0.98);
+    border-color: #ffcb05;
+}
+
+.zone-card-info h3 {
+    margin: 0 0 5px 0;
+    color: #ffcb05;
+    font-size: 16px;
+    font-family: 'Righteous';
+}
+
+.zone-card-info p {
+    margin: 0;
+    font-size: 11px;
+    color: #ccc;
+}
+
+.zone-btn {
+    background: #3498db;
+    color: white;
+    border: 2px solid white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: 'Righteous';
+    cursor: pointer;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.team-slots {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin: 15px 0;
+}
+
+.slot {
+    width: 70px;
+    height: 70px;
+    border: 2px dashed #666;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.5);
+    font-size: 20px;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.btn-start-exp {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    padding: 12px;
+    border: 2px solid white;
+    border-radius: 12px;
+    font-family: 'Righteous';
+    width: 100%;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.btn-start-exp:disabled {
+    filter: grayscale(1);
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-cancel-exp {
+    background: transparent;
+    color: #e74c3c;
+    border: 2px solid #e74c3c;
+    padding: 10px;
+    border-radius: 12px;
+    font-family: 'Righteous';
+    width: 100%;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.active-expedition-container {
+    background: rgba(0,0,0,0.6);
+    border: 2px solid #3498db;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.active-expedition-zone-title {
+    color: #3498db;
+    margin-top: 0;
+    font-family: 'Righteous';
+}
+
+.active-expedition-team {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.active-team-slot {
+    width: 50px;
+    height: 50px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.active-team-slot img {
+    width: 80%;
+    height: 80%;
+    object-fit:contain;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 15px;
+    background: #222;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #555;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+    transition: width 1s linear;
+}
+
+.btn-admin {
+    background: #c0392b;
+    color: white;
+    border: 2px dashed #fff;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    font-size: 12px;
+    margin-top: 15px;
+}
