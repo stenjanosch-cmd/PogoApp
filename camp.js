@@ -1,19 +1,44 @@
 let stardust = parseInt(localStorage.getItem('pogo_stardust')) || 0;
-let activeExpeditions = JSON.parse(localStorage.getItem('pogo_expeditions')) || {};
 
 const EXP_DURATION = 10 * 60 * 1000; // 10 Minuten pro Mission
 
-const biomes = {
-    vulkan: { name: "Vulkan", types: ["fire", "rock"], color1: "#EE8130", color2: "#B6A136", icon: "fire", baseDust: 150 },
-    tiefsee: { name: "Tiefsee", types: ["water", "ice"], color1: "#6390F0", color2: "#96D9D6", icon: "water", baseDust: 150 },
-    spukwald: { name: "Spukwald", types: ["ghost", "poison"], color1: "#735797", color2: "#A33EA1", icon: "ghost", baseDust: 150 },
-    kraftwerk: { name: "Kraftwerk", types: ["electric", "steel"], color1: "#F7D02C", color2: "#B7B7CE", icon: "electric", baseDust: 150 }
-};
+// 12 verschiedene Zonen, aus denen das System dynamisch auswählt
+const biomeTemplates = [
+    { name: "Vulkan", types: ["fire", "rock"], color1: "#EE8130", color2: "#B6A136", icon: "fire", baseDust: 150 },
+    { name: "Tiefsee", types: ["water", "ice"], color1: "#6390F0", color2: "#96D9D6", icon: "water", baseDust: 150 },
+    { name: "Spukwald", types: ["ghost", "poison"], color1: "#735797", color2: "#A33EA1", icon: "ghost", baseDust: 150 },
+    { name: "Kraftwerk", types: ["electric", "steel"], color1: "#F7D02C", color2: "#B7B7CE", icon: "electric", baseDust: 150 },
+    { name: "Dschungel", types: ["grass", "bug"], color1: "#7AC74C", color2: "#A6B91A", icon: "grass", baseDust: 150 },
+    { name: "Wüste", types: ["ground", "rock"], color1: "#E2BF65", color2: "#B6A136", icon: "ground", baseDust: 150 },
+    { name: "Gletscher", types: ["ice", "water"], color1: "#96D9D6", color2: "#6390F0", icon: "ice", baseDust: 150 },
+    { name: "Ruinen", types: ["psychic", "ground"], color1: "#F95587", color2: "#E2BF65", icon: "psychic", baseDust: 150 },
+    { name: "Wolkenmeer", types: ["flying", "fairy"], color1: "#A98FF3", color2: "#D685AD", icon: "flying", baseDust: 150 },
+    { name: "Kampf-Dojo", types: ["fighting", "normal"], color1: "#C22E28", color2: "#A8A77A", icon: "fighting", baseDust: 150 },
+    { name: "Finsterhöhle", types: ["dark", "rock"], color1: "#705898", color2: "#B6A136", icon: "dark", baseDust: 150 },
+    { name: "Drachenhort", types: ["dragon", "fire"], color1: "#6F35FC", color2: "#EE8130", icon: "dragon", baseDust: 150 }
+];
+
+// Neues Versions-Management, damit alte Datenstrukturen die App nicht crashen
+let activeBiomes = JSON.parse(localStorage.getItem('pogo_active_biomes_v3'));
+let activeExpeditions = JSON.parse(localStorage.getItem('pogo_expeditions_v3')) || {};
+
+// Erstmalige Zuweisung der 4 Start-Zonen
+if (!activeBiomes) {
+    activeBiomes = {
+        zone1: biomeTemplates[0],
+        zone2: biomeTemplates[1],
+        zone3: biomeTemplates[2],
+        zone4: biomeTemplates[3]
+    };
+    localStorage.setItem('pogo_active_biomes_v3', JSON.stringify(activeBiomes));
+    // Alte, inkompatible Expeditions-Daten löschen, um Abstürze zu vermeiden
+    localStorage.removeItem('pogo_expeditions');
+}
 
 let currentBiomeSelect = null;
 let campTimer = null;
 
-// --- EIGENER WILLOW POPUP FÜRS CAMP ---
+// --- GLOBAL WILLOW POPUP FÜRS CAMP ---
 function showCampWillow(text) {
     document.getElementById('camp-willow-text').innerHTML = text;
     document.getElementById('camp-willow-overlay').style.display = 'flex';
@@ -51,9 +76,9 @@ function renderBiomes() {
     container.innerHTML = '';
     const now = Date.now();
     
-    Object.keys(biomes).forEach(biomeId => {
-        const b = biomes[biomeId];
-        const exp = activeExpeditions[biomeId];
+    Object.keys(activeBiomes).forEach(zoneId => {
+        const b = activeBiomes[zoneId];
+        const exp = activeExpeditions[zoneId];
         
         let badgesHTML = b.types.map(t => {
             return `<div class="biome-type-badge" style="background-color: ${typeColors[t]};">
@@ -76,14 +101,14 @@ function renderBiomes() {
         if (!exp) {
             cardHTML += `
                 <div class="biome-status ready">Bereit für Expedition</div>
-                <button class="camp-action-btn" onclick="openPokemonSelect('${biomeId}')">Pokémon senden</button>
+                <button class="camp-action-btn" onclick="openPokemonSelect('${zoneId}')">Pokémon senden</button>
             `;
         } else {
             const timeLeft = exp.endTime - now;
             if (timeLeft <= 0) {
                 cardHTML += `
                     <div class="biome-status return">Rückkehr!</div>
-                    <button class="camp-resolve-btn" onclick="resolveExpedition('${biomeId}')">Bericht ansehen</button>
+                    <button class="camp-resolve-btn" onclick="resolveExpedition('${zoneId}')">Bericht ansehen</button>
                 `;
             } else {
                 let m = Math.floor(timeLeft / 60000);
@@ -100,8 +125,8 @@ function renderBiomes() {
     });
 }
 
-function openPokemonSelect(biomeId) {
-    currentBiomeSelect = biomeId;
+function openPokemonSelect(zoneId) {
+    currentBiomeSelect = zoneId;
     
     const dex = (typeof pokedex !== 'undefined') ? pokedex : (JSON.parse(localStorage.getItem('pogo_dex_v6')) || {});
     const grid = document.getElementById('camp-select-grid');
@@ -126,7 +151,7 @@ function openPokemonSelect(biomeId) {
             div.style.cursor = 'pointer';
             div.style.boxShadow = "0 4px 6px rgba(0,0,0,0.5)";
             
-            div.onclick = () => startExpedition(biomeId, id);
+            div.onclick = () => startExpedition(zoneId, id);
             
             div.innerHTML = `
                 <img class="dex-img" src="${pImg}" alt="${pName}" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png'">
@@ -153,38 +178,51 @@ function openPokemonSelect(biomeId) {
     showScreen('screen-camp-select');
 }
 
-async function startExpedition(biomeId, pkmId) {
+async function startExpedition(zoneId, pkmId) {
     const grid = document.getElementById('camp-select-grid');
     grid.style.display = "block";
     grid.innerHTML = '<div style="color: #ffcb05; text-align: center; font-weight: bold; font-size: 18px; padding: 40px;">Bereite Expedition vor... ⏳</div>';
     
     try {
         const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pkmId}`);
-        if(!res.ok) throw new Error("API Limit erreicht");
+        if(!res.ok) throw new Error("API Limit");
         
         const data = await res.json();
         const pkmTypes = data.types.map(t => t.type.name);
         
         const now = Date.now();
-        activeExpeditions[biomeId] = {
+        activeExpeditions[zoneId] = {
             pkmId: pkmId,
             pkmName: data.name,
             pkmTypes: pkmTypes,
             endTime: now + EXP_DURATION
         };
         
-        localStorage.setItem('pogo_expeditions', JSON.stringify(activeExpeditions));
+        localStorage.setItem('pogo_expeditions_v3', JSON.stringify(activeExpeditions));
         showScreen('screen-camp');
         renderBiomes();
     } catch(e) {
         showCampWillow("Mein Radar ist gestört! Es gab einen Netzwerkfehler bei der Verbindung zum Pokédex. Bitte versuche es gleich noch einmal.");
-        openPokemonSelect(biomeId);
+        openPokemonSelect(zoneId);
     }
 }
 
-function resolveExpedition(biomeId) {
-    const exp = activeExpeditions[biomeId];
-    const b = biomes[biomeId];
+// Würfelt eine komplett neue Zone aus dem Pool, die aktuell noch nicht aktiv ist
+function rollNewBiome(zoneId) {
+    const activeNames = Object.values(activeBiomes).map(b => b.name);
+    let available = biomeTemplates.filter(b => !activeNames.includes(b.name));
+    
+    // Fallback falls aus irgendeinem Grund alle blockiert sind
+    if(available.length === 0) available = biomeTemplates; 
+    
+    const randomBiome = available[Math.floor(Math.random() * available.length)];
+    activeBiomes[zoneId] = randomBiome;
+    localStorage.setItem('pogo_active_biomes_v3', JSON.stringify(activeBiomes));
+}
+
+function resolveExpedition(zoneId) {
+    const exp = activeExpeditions[zoneId];
+    const b = activeBiomes[zoneId];
     
     let incomingDamage = 1; 
     for(let bType of b.types) {
@@ -205,18 +243,21 @@ function resolveExpedition(biomeId) {
     }
     
     if (incomingDamage > 1) {
-        showCampWillow(`Oh nein! Das Biom war zu gefährlich für dein Teammitglied. Es hatte eine gravierende Schwäche gegen diese Umgebung und musste ohne Sternenstaub flüchten. Achte nächstes Mal besser auf die Typ-Effektivität!`);
+        showCampWillow(`Oh nein! <b>${b.name}</b> war zu gefährlich für dein Pokémon. Es hatte einen kritischen Typ-Nachteil gegen diese Umgebung und musste leider ohne Sternenstaub flüchten. Achte nächstes Mal besser auf die Elemente!`);
     } else if (outgoingDamage > 1) {
         let earned = b.baseDust * 2;
         stardust += earned;
-        showCampWillow(`Hervorragende Wahl, Trainer! Dein Pokémon hatte den perfekten Typ-Vorteil und hat die Zone komplett dominiert. Es bringt sensationelle <b>${earned} ✨</b> mit!`);
+        showCampWillow(`Hervorragende Wahl, Trainer! Dein Pokémon war der absolute perfekte Konter für <b>${b.name}</b> und hat die Zone dominiert. Es bringt sensationelle <b>${earned} ✨</b> mit!`);
     } else {
         stardust += b.baseDust;
-        showCampWillow(`Gute Arbeit! Die Expedition war solide und erfolgreich. Dein Teammitglied ist sicher zurück und hat <b>${b.baseDust} ✨</b> gesammelt.`);
+        showCampWillow(`Gute Arbeit! Die Expedition in <b>${b.name}</b> war solide und erfolgreich. Dein Teammitglied ist sicher zurück und hat <b>${b.baseDust} ✨</b> für dich gesammelt.`);
     }
     
-    delete activeExpeditions[biomeId];
-    localStorage.setItem('pogo_expeditions', JSON.stringify(activeExpeditions));
+    // Löscht die aktuelle Expedition und tauscht die Zone durch eine Neue aus
+    delete activeExpeditions[zoneId];
+    rollNewBiome(zoneId);
+    
+    localStorage.setItem('pogo_expeditions_v3', JSON.stringify(activeExpeditions));
     updateStardustDisplay();
     renderBiomes();
 }

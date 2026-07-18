@@ -23,13 +23,12 @@
         @keyframes bobbing { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
         @keyframes floating { 0% { transform: translateY(0); } 100% { transform: translateY(-25px); } }
 
-        /* --- RADAR LAMPE (Mit sauberem UI-Rahmen) --- */
+        /* --- RADAR LAMPE --- */
         #pokemon-container { 
             position: relative; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             width: 100%; max-width: 400px; margin: 0 auto;
             min-height: 220px;
-            /* overflow: hidden sorgt dafür, dass das Licht den Container NICHT verlässt */
             overflow: hidden; 
             border-radius: 20px;
             padding: 20px;
@@ -77,7 +76,6 @@
         .camp-action-btn.disabled { background: #7f8c8d; color: #ccc; cursor: not-allowed; box-shadow: none; }
         .camp-resolve-btn { background: #2ecc71; color: #fff; border: none; padding: 12px 25px; border-radius: 25px; font-weight: 900; cursor: pointer; font-family: 'Montserrat', sans-serif; width: 100%; animation: pulse 1.5s infinite; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.5); }
         
-        /* Handy-Fix: Zwingt den Selection-Screen in die Höhe, damit er scrollbar wird */
         .screen.active.camp-select-layout { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -85,10 +83,21 @@
     </style>
 </head>
 <body>
+    <!-- Das Willow Overlay wurde komplett aus allen Containern befreit und ans Hauptfenster gekettet. 
+         So ignoriert es alle Scroll-Bereiche und ist IMMER fest auf dem Display sichtbar. -->
+    <div id="camp-willow-overlay" onclick="closeCampWillow()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(13, 27, 42, 0.9); z-index: 99999; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px);">
+        <div style="background: white; color: #2c3e50; padding: 15px; border-radius: 15px; font-weight: bold; font-size: 14px; line-height: 1.4; text-align: center; max-width: 280px; width: 100%; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <div id="camp-willow-text">Text...</div>
+            <div style="content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); border-width: 10px 10px 0; border-style: solid; border-color: white transparent transparent transparent;"></div>
+        </div>
+        <img src="https://github.com/stenjanosch-cmd/PogoApp/blob/main/150px-Professor_Willow.png?raw=true" style="width: 90px; margin-top: 15px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));" alt="Prof Willow">
+        <div style="color: rgba(255,255,255,0.6); font-size: 10px; text-transform: uppercase; font-weight: 900; margin-top: 10px; letter-spacing: 1px;">(Tippen zum Schließen)</div>
+    </div>
+
     <div id="bg-animations"></div>
 
-    <button id="fullscreen-btn" onclick="toggleFullscreen()" style="position: fixed; bottom: 20px; left: 20px; z-index: 9999; background: rgba(0,0,0,0.7); color: white; border: 2px solid #3498db; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">🔲</button>
-    <button id="mute-btn" onclick="toggleMute()" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.7); color: white; border: 2px solid #ffcb05; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">🔊</button>
+    <button id="fullscreen-btn" onclick="toggleFullscreen()" style="position: fixed; bottom: 20px; left: 20px; z-index: 8000; background: rgba(0,0,0,0.7); color: white; border: 2px solid #3498db; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">🔲</button>
+    <button id="mute-btn" onclick="toggleMute()" style="position: fixed; bottom: 20px; right: 20px; z-index: 8000; background: rgba(0,0,0,0.7); color: white; border: 2px solid #ffcb05; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">🔊</button>
 
     <div id="intro-overlay">
         <button id="start-btn" onclick="playIntro()">▶ Training Starten</button>
@@ -149,7 +158,7 @@
                     <img class="sort-img" id="sort-img" src="" alt="Pokemon">
                     <div class="sort-name" id="sort-name">Lade...</div>
                 </div>
-                <!-- Altes Willow Overlay für Sortierspiel bleibt intakt -->
+                <!-- Altes Sortier Willow Overlay bleibt intakt -->
                 <div id="willow-overlay" onclick="closeWillow()">
                     <div class="willow-container">
                         <div class="willow-speech" id="willow-text">Text</div>
@@ -175,7 +184,6 @@
             </div>
             <p class="subtitle" id="game-subtitle">Lade...</p>
             
-            <!-- Der modifizierte Pokemon-Container -->
             <div id="pokemon-container">
                 <div id="radar-lamp"></div>
                 <div id="rocket-speech" class="speech-bubble"></div>
@@ -261,7 +269,7 @@
             </div>
         </div>
         
-        <!-- NEUER SCREEN: POKEMON AUSWAHL (100% sicher und robust, Scroll-Fix für Smartphones) -->
+        <!-- POKEMON AUSWAHL -->
         <div id="screen-camp-select" class="screen camp-select-layout">
             <div class="top-nav">
                 <button class="back-btn" onclick="showScreen('screen-camp')">⮌ Zurück</button>
@@ -270,22 +278,9 @@
             
             <p class="subtitle" style="margin-bottom: 10px; padding: 0 10px;">Welches Pokémon möchtest du auf die Mission schicken?</p>
             
-            <!-- Der flex: 1 Wrapper zwingt Safari & Chrome dazu, den inneren Bereich scrollbar zu machen -->
             <div style="flex: 1; width: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; box-sizing: border-box; padding-bottom: 40px;">
-                <div class="pokedex-grid" id="camp-select-grid">
-                    <!-- Wird per JS dynamisch und absturzsicher gefüllt -->
-                </div>
+                <div class="pokedex-grid" id="camp-select-grid"></div>
             </div>
-        </div>
-
-        <!-- GLOBAL WILLOW POPUP FÜR CAMP UND FEHLER -->
-        <div id="camp-willow-overlay" onclick="closeCampWillow()" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(13, 27, 42, 0.9); z-index: 20000; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px);">
-            <div style="background: white; color: #2c3e50; padding: 20px; border-radius: 20px; font-weight: bold; font-size: 16px; line-height: 1.5; text-align: center; max-width: 350px; width: 100%; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                <div id="camp-willow-text">Text...</div>
-                <div style="content: ''; position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); border-width: 15px 15px 0; border-style: solid; border-color: white transparent transparent transparent;"></div>
-            </div>
-            <img src="https://github.com/stenjanosch-cmd/PogoApp/blob/main/150px-Professor_Willow.png?raw=true" style="width: 130px; margin-top: 25px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));" alt="Prof Willow">
-            <div style="color: rgba(255,255,255,0.6); font-size: 11px; text-transform: uppercase; font-weight: 900; margin-top: 15px; letter-spacing: 1px;">(Tippen zum Schließen)</div>
         </div>
 
     </div>
