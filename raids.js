@@ -18,7 +18,19 @@ const raidBosses = [
 const RAID_DURATION = 15 * 60 * 1000; // 15 Minuten Raid-Kampf
 const EGG_HATCH_TIME = 5 * 60 * 1000; // 5 Minuten bis das Ei schlüpft
 
-let currentRaid = JSON.parse(localStorage.getItem('pogo_raid_v1')) || null;
+// ANTI-CRASH SYSTEM FÜR MOBILGERÄTE
+let currentRaid = null;
+try {
+    currentRaid = JSON.parse(localStorage.getItem('pogo_raid_v1'));
+    // Wenn die Daten korrupt sind (z.B. kein Boss definiert), löschen wir sie
+    if (currentRaid && (!currentRaid.boss || !currentRaid.state)) {
+        currentRaid = null;
+    }
+} catch (e) {
+    currentRaid = null;
+    localStorage.removeItem('pogo_raid_v1');
+}
+
 let raidTimer = null;
 let selectedRaidTeam = []; // Max 3 Pokémon
 
@@ -31,10 +43,16 @@ if (window.EventBus) {
     });
 }
 
+// ROBUSTER FALLBACK-TIMER FÜR HANDYS (Erzwingt Updates)
+setInterval(() => {
+    const tab = document.getElementById('camp-tab-raids');
+    if (tab && tab.classList.contains('active')) {
+        renderRaidTab();
+    }
+}, 1000);
+
 function initRaidSystem() {
     renderRaidTab();
-    if(raidTimer) clearInterval(raidTimer);
-    raidTimer = setInterval(() => { renderRaidTab(); }, 1000); 
 }
 
 function spawnNewRaid() {
@@ -59,7 +77,7 @@ function renderRaidTab() {
     const container = document.getElementById('raids-container');
     if (!container) return;
     
-    // Wenn es keinen aktiven Raid gibt, würfeln wir einen neuen (10% Chance pro Tick, wenn leer)
+    // Wenn es keinen aktiven Raid gibt, würfeln wir einen neuen (10% Chance pro Tick)
     if (!currentRaid) {
         if(Math.random() < 0.1) spawnNewRaid();
         else {
@@ -105,8 +123,8 @@ function renderRaidTab() {
     else if (currentRaid.state === 'HATCHED') {
         let bossImg = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${currentRaid.boss.id}.png`;
         let typeBadges = currentRaid.boss.types.map(t => {
-            return `<div class="biome-type-badge" style="background-color: ${typeColors[t]}; margin: 0 auto 5px auto; display: inline-flex;">
-                        <img src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${t}.svg"> ${typeTranslations[t]}
+            return `<div class="biome-type-badge" style="background-color: ${(typeof typeColors !== 'undefined') ? typeColors[t] : '#777'}; margin: 0 auto 5px auto; display: inline-flex;">
+                        <img src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${t}.svg"> ${(typeof typeTranslations !== 'undefined') ? typeTranslations[t] : t}
                     </div>`;
         }).join('');
 
@@ -185,18 +203,11 @@ function renderRaidTeamSlots() {
     }
 }
 
-function removeRaidTeamMember(index) {
-    selectedRaidTeam.splice(index, 1);
-    renderRaidTeamSlots();
-    renderRaidDexGrid();
-}
-
 function renderRaidDexGrid() {
     const dex = (typeof pokedex !== 'undefined') ? pokedex : (JSON.parse(localStorage.getItem('pogo_dex_v6')) || {});
     const grid = document.getElementById('raid-select-grid');
     grid.innerHTML = '';
     
-    // Wir prüfen auch, ob Pokemon bereits auf einer normalen Expedition sind
     let globalActiveExpeditions = JSON.parse(localStorage.getItem('pogo_expeditions_v3')) || {};
 
     for (let id in dex) {
@@ -204,7 +215,7 @@ function renderRaidDexGrid() {
         if(!pkm) continue;
         
         const isBusy = Object.values(globalActiveExpeditions).some(e => String(e.pkmId) === String(id));
-        const isExhausted = (typeof exhausted !== 'undefined' ? exhausted : []).includes(String(id));
+        const isExhausted = (typeof exhausted !== 'undefined' ? exhausted : (JSON.parse(localStorage.getItem('pogo_exhausted_v1'))||[])).includes(String(id));
         const isSelectedForRaid = selectedRaidTeam.includes(String(id));
         
         if(!isBusy && !isExhausted) {
@@ -213,6 +224,7 @@ function renderRaidDexGrid() {
             let pImg = pkm.img || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
             
             div.className = isSelectedForRaid ? 'dex-entry caught selected-for-raid' : 'dex-entry caught'; 
+            div.style.cursor = isSelectedForRaid ? 'default' : 'pointer';
             
             if(!isSelectedForRaid) {
                 div.onclick = () => {
@@ -224,10 +236,22 @@ function renderRaidDexGrid() {
                 };
             }
 
+            // NEU: Element-Anzeige für das Raid-Menü!
+            let typeHtml = '';
+            if (pkm.types && Array.isArray(pkm.types)) {
+                let cColors = (typeof typeColors !== 'undefined') ? typeColors : {};
+                let cTrans = (typeof typeTranslations !== 'undefined') ? typeTranslations : {};
+                typeHtml = pkm.types.map(t => `<img class="camp-select-type-icon" style="background-color: ${cColors[t] || '#777'};" src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${t}.svg" title="${cTrans[t] || t}">`).join('');
+            } else {
+                typeHtml = `<span style="font-size: 9px; color: #aaa; text-transform: uppercase;">Lade...</span>`;
+                if(typeof fetchPokemonTypes === 'function') fetchPokemonTypes(id); 
+            }
+
             div.innerHTML = `
                 <img class="dex-img" src="${pImg}">
                 <div class="dex-id">#${id}</div>
                 <div class="dex-name">${pName}</div>
+                <div class="camp-select-types" id="camp-types-${id}">${typeHtml}</div>
             `;
             grid.appendChild(div);
         }
@@ -264,7 +288,7 @@ function resolveRaid() {
         // Output damage check
         for(let pType of pkmTypes) {
             for(let bType of bossTypes) {
-                if(typeChart[pType] && typeChart[pType][bType] !== undefined) {
+                if(typeof typeChart !== 'undefined' && typeChart[pType] && typeChart[pType][bType] !== undefined) {
                     pkmScore *= typeChart[pType][bType];
                 }
             }
@@ -273,7 +297,7 @@ function resolveRaid() {
         // Input damage check (Survival)
         for(let bType of bossTypes) {
             for(let pType of pkmTypes) {
-                if(typeChart[bType] && typeChart[bType][pType] !== undefined) {
+                if(typeof typeChart !== 'undefined' && typeChart[bType] && typeChart[bType][pType] !== undefined) {
                     // Wenn boss effektiv ist, senkt das unseren score
                     if(typeChart[bType][pType] > 1) pkmScore -= 0.5;
                     if(typeChart[bType][pType] < 1) pkmScore += 0.5; // Resistenz ist gut!
@@ -325,7 +349,6 @@ function resolveRaid() {
 }
 
 async function triggerBossCatch(bossObj) {
-    // Nutzen wir den Camp-Encounter Screen, der für Lockmodule gebaut wurde, passen ihn aber für Bosse an
     const area = document.getElementById('camp-encounter-area');
     if(!area) return;
     

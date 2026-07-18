@@ -235,7 +235,7 @@
             
             <div class="camp-tabs">
                 <button id="tab-btn-expedition" class="camp-tab-btn active" onclick="switchCampTab('expedition')">🗺️ Zonen</button>
-                <button id="tab-btn-raids" class="camp-tab-btn" onclick="switchCampTab('raids')" style="border: 1px solid #f1c40f;">🐉 Raids</button>
+                <button id="tab-btn-raids" class="camp-tab-btn" onclick="switchCampTab('raids'); if(typeof renderRaidTab === 'function') renderRaidTab();" style="border: 1px solid #f1c40f;">🐉 Raids</button>
                 <button id="tab-btn-shop" class="camp-tab-btn" onclick="switchCampTab('shop')">🛒 Shop</button>
                 <button id="tab-btn-inventory" class="camp-tab-btn" onclick="switchCampTab('inventory')">🎒 Rucksack</button>
             </div>
