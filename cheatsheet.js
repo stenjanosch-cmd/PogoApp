@@ -1,5 +1,12 @@
-// cheatsheet.js - PoGo Dashboard Logik
 let selectedCheatTypes = [];
+
+// --- DER EVENT-SCANNER ---
+if (window.EventBus) {
+    EventBus.on('screenChanged', (data) => {
+        if (data.screen === 'screen-cheatsheet') setupCheatsheet();
+    });
+}
+// --------------------------
 
 function setupCheatsheet() {
     const grid = document.getElementById('cheat-icons');

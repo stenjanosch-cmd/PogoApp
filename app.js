@@ -1,3 +1,14 @@
+// --- EVENT BUS (Das Scanner-System) ---
+window.EventBus = {
+    on: function(eventName, callback) {
+        document.addEventListener(eventName, function(e) { callback(e.detail); });
+    },
+    emit: function(eventName, data) {
+        document.dispatchEvent(new CustomEvent(eventName, { detail: data }));
+    }
+};
+// --------------------------------------
+
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.error('Service Worker Fehler', err));
 }
@@ -77,7 +88,13 @@ function updateTrainerCard() {
     document.getElementById('trainer-lvl').innerText = lvl; document.getElementById('trainer-title').innerText = title;
     document.getElementById('xp-fill').style.width = progress + '%'; document.getElementById('xp-text').innerText = `${trainerXp} / ${nextLevelXp} XP`;
 }
-function addXp(amount) { trainerXp += amount; localStorage.setItem('pogo_xp_v6', trainerXp); updateTrainerCard(); }
+
+function addXp(amount) { 
+    trainerXp += amount; 
+    localStorage.setItem('pogo_xp_v6', trainerXp); 
+    updateTrainerCard(); 
+    EventBus.emit('xpChanged', { current: trainerXp, added: amount });
+}
 updateTrainerCard();
 
 function showScreen(screenId) {
@@ -85,8 +102,8 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.add('active');
     setDynamicBackground(screenId, null);
     
-    if(screenId === 'screen-cheatsheet' && typeof setupCheatsheet === 'function') setupCheatsheet();
-    if(screenId === 'screen-camp' && typeof initCamp === 'function') initCamp();
+    // Funkt an alle abgekapselten Module (Cheatsheet, Camp etc.)
+    EventBus.emit('screenChanged', { screen: screenId });
 }
 
 let currentMode = 'attack'; let currentPokemonTypes = []; let currentEnemyAttackType = ''; let currentPokemonId = null; let currentBaseId = null; let currentPokemonName = ''; let currentPokemonImg = ''; let firstAttempt = true; let guessedTypesArray = []; let currentRocket = null; let timer = null; let timeLeft = 0; let rocketShuffleBag = [];
@@ -225,7 +242,15 @@ function checkRadarAnswer(selected, correct) {
     currentPokemonTypes.forEach(type => { let badge = document.createElement("div"); badge.className = "type-badge"; badge.style.backgroundColor = typeColors[type]; badge.innerText = typeTranslations[type]; tc.appendChild(badge); });
     const fb = document.getElementById("feedback"); const fbMain = document.getElementById("feedback-main");
     fb.style.display = "block"; document.getElementById("next-btn").style.display = "inline-block";
-    if(selected.toLowerCase() === correct.toLowerCase()) { if (!pokedex[currentPokemonId]) { pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes }; localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); } addXp(15); fbMain.innerHTML = `Gefangen! ${iconPokeball}<br>Es ist ${correct}!`; fb.style.backgroundColor = "rgba(46, 204, 113, 0.7)"; fb.style.border = "2px solid #2ecc71"; } 
+    if(selected.toLowerCase() === correct.toLowerCase()) { 
+        if (!pokedex[currentPokemonId]) { 
+            pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes }; 
+            localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); 
+            EventBus.emit('pokemonCaught', { id: currentPokemonId, data: pokedex[currentPokemonId] });
+        } 
+        addXp(15); 
+        fbMain.innerHTML = `Gefangen! ${iconPokeball}<br>Es ist ${correct}!`; fb.style.backgroundColor = "rgba(46, 204, 113, 0.7)"; fb.style.border = "2px solid #2ecc71"; 
+    } 
     else { fbMain.innerHTML = "❌ Geflüchtet...<br>Es war " + correct + "."; fb.style.backgroundColor = "rgba(231, 76, 60, 0.7)"; fb.style.border = "2px solid #e74c3c"; }
     document.querySelectorAll('.name-btn').forEach(b => b.disabled = true);
 }
@@ -234,12 +259,24 @@ function checkAnswer(userSelectedType) {
     if (currentPokemonTypes.length === 0) return;
     const fb = document.getElementById("feedback"); const fbMain = document.getElementById("feedback-main"); const fbReason = document.getElementById("feedback-reason");
     let isSuccess = false; let catchPrefix = ""; fbReason.innerHTML = "";
+    
     if (currentMode === 'guess') {
         if (guessedTypesArray.includes(userSelectedType)) return; const btn = document.getElementById("btn-" + userSelectedType);
         if (currentPokemonTypes.includes(userSelectedType)) {
             btn.classList.add('eff-super'); btn.disabled = true; guessedTypesArray.push(userSelectedType);
             let badge = document.createElement("div"); badge.className = "type-badge"; badge.style.backgroundColor = typeColors[userSelectedType]; badge.innerText = typeTranslations[userSelectedType]; document.getElementById("pokemon-types").appendChild(badge);
-            if (guessedTypesArray.length === currentPokemonTypes.length) { if(firstAttempt) { catchPrefix = `Perfekt! ${iconPokeball}<br>`; if (!pokedex[currentPokemonId]) { pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes }; localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); } addXp(15); firstAttempt=false; } fbMain.innerHTML = catchPrefix + "Richtig! Alle Typen gefunden."; fb.style.backgroundColor = "rgba(46, 204, 113, 0.7)"; fb.style.border = "2px solid #2ecc71"; fb.style.display = "block"; document.getElementById("next-btn").style.display = "inline-block"; }
+            if (guessedTypesArray.length === currentPokemonTypes.length) { 
+                if(firstAttempt) { 
+                    catchPrefix = `Perfekt! ${iconPokeball}<br>`; 
+                    if (!pokedex[currentPokemonId]) { 
+                        pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes }; 
+                        localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); 
+                        EventBus.emit('pokemonCaught', { id: currentPokemonId, data: pokedex[currentPokemonId] });
+                    } 
+                    addXp(15); firstAttempt=false; 
+                } 
+                fbMain.innerHTML = catchPrefix + "Richtig! Alle Typen gefunden."; fb.style.backgroundColor = "rgba(46, 204, 113, 0.7)"; fb.style.border = "2px solid #2ecc71"; fb.style.display = "block"; document.getElementById("next-btn").style.display = "inline-block"; 
+            }
         } else { btn.classList.add('eff-weak'); btn.disabled = true; if(firstAttempt) { catchPrefix = "❌ Geflüchtet...<br>"; firstAttempt=false; } fbMain.innerHTML = catchPrefix + "Falsch! " + typeTranslations[userSelectedType] + " gehört nicht dazu."; fb.style.backgroundColor = "rgba(231, 76, 60, 0.7)"; fb.style.border = "2px solid #e74c3c"; fb.style.display = "block"; document.getElementById("next-btn").style.display = "inline-block"; }
         return;
     }
@@ -249,8 +286,19 @@ function checkAnswer(userSelectedType) {
     else if (currentMode === 'defend') { if (typeChart[currentEnemyAttackType] && typeChart[currentEnemyAttackType][userSelectedType] !== undefined) multiplier = typeChart[currentEnemyAttackType][userSelectedType]; isSuccess = multiplier < 1; if(multiplier < 1) fbReason.innerHTML = `${typeTranslations[userSelectedType]} resistiert Angriffe vom Typ ${typeTranslations[currentEnemyAttackType]} gut!`; }
     const displayMult = multiplier.toFixed(2).replace('.00', '');
     let usedBall = iconPokeball; if (currentMode === 'rocket') usedBall = iconPremierball; if (currentMode === 'hardcore') usedBall = iconHyperball;
-    if (firstAttempt && currentMode !== 'rocket' && currentMode !== 'weather') { if (isSuccess) { catchPrefix = `Gefangen! ${usedBall}<br>`; if (!pokedex[currentPokemonId]) { pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes }; localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); } } else if (!isSuccess) { catchPrefix = "❌ Geflüchtet...<br>"; } } 
+    
+    if (firstAttempt && currentMode !== 'rocket' && currentMode !== 'weather') { 
+        if (isSuccess) { 
+            catchPrefix = `Gefangen! ${usedBall}<br>`; 
+            if (!pokedex[currentPokemonId]) { 
+                pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes }; 
+                localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); 
+                EventBus.emit('pokemonCaught', { id: currentPokemonId, data: pokedex[currentPokemonId] });
+            } 
+        } else if (!isSuccess) { catchPrefix = "❌ Geflüchtet...<br>"; } 
+    } 
     else if (firstAttempt && currentMode === 'rocket') { if (isSuccess) catchPrefix = `Besiegt! ${usedBall}<br>`; else catchPrefix = "❌ Du wurdest besiegt...<br>"; }
+    
     if (isSuccess) {
         if (currentMode === 'attack') addXp(10); if (currentMode === 'defend') addXp(12); if (currentMode === 'rocket') addXp(20); if (currentMode === 'hardcore') addXp(30);
         if (currentMode === 'rocket') fbMain.innerHTML = catchPrefix + "Richtig gekontert!"; else fbMain.innerHTML = catchPrefix + "Richtig! (" + displayMult + "x Schaden)";

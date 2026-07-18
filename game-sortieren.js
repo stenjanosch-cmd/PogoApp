@@ -1,5 +1,5 @@
 // ==============================================
-// DATEI: game-sortieren.js
+// DATEI: game-sortieren.js (Event-Ready)
 // ==============================================
 
 const metaPvEPool = [3,6,9,68,149,150,248,260,373,376,382,383,384,448,464,483,484,487,530,635,643,644,798,800];
@@ -9,8 +9,9 @@ const legendaryPool = [144,145,146,150,151,243,244,245,249,250,251,377,378,379,3
 let currentSortMon = { id: null, name: "", isCrypto: false, isShiny: false, isEvent: false, isSpecialBg: false, isMeta: false, isLegendary: false };
 let isAnimating = false;
 
+// Das Sortier-Spiel kündigt seinen Start über den Scanner an (nützlich für zukünftige Musik-Wechsel o.ä.)
 function startSortGame() { 
-    showScreen('screen-sort'); 
+    if (typeof showScreen === 'function') showScreen('screen-sort'); 
     loadNextSortPokemon(); 
 }
 
@@ -61,7 +62,17 @@ function handleSortAction(action) {
     if(action === 'keep') card.style.transform = "translate(0px, -200px) scale(1.1)";
     
     setTimeout(() => {
-        if (correctActions.includes(action)) { card.classList.add('anim-catch'); addXp(15); setTimeout(() => { isAnimating = false; loadNextSortPokemon(); }, 600); } 
+        if (correctActions.includes(action)) { 
+            card.classList.add('anim-catch'); 
+            if (typeof addXp === 'function') addXp(15); 
+            
+            // SIGNAL SENDEN: Ein Pokémon wurde erfolgreich sortiert
+            if (window.EventBus) {
+                EventBus.emit('pokemonSorted', { action: action, pokemon: currentSortMon });
+            }
+
+            setTimeout(() => { isAnimating = false; loadNextSortPokemon(); }, 600); 
+        } 
         else { card.classList.add('anim-flee'); setTimeout(() => showWillow(reason), 400); }
     }, 200);
 }
@@ -71,13 +82,16 @@ function closeWillow() { document.getElementById('willow-overlay').classList.rem
 
 const sortTouchCard = document.getElementById('sort-card');
 let sTouchStartX = 0; let sTouchStartY = 0; let sTouchCurrentX = 0; let sTouchCurrentY = 0; let sIsDragging = false;
-sortTouchCard.addEventListener('touchstart', e => { if(isAnimating) return; sIsDragging = true; sTouchStartX = e.touches[0].clientX; sTouchStartY = e.touches[0].clientY; sortTouchCard.style.transition = 'none'; }, {passive: true});
-sortTouchCard.addEventListener('touchmove', e => { if(!sIsDragging || isAnimating) return; sTouchCurrentX = e.touches[0].clientX - sTouchStartX; sTouchCurrentY = e.touches[0].clientY - sTouchStartY; sortTouchCard.style.transform = `translate(${sTouchCurrentX}px, ${sTouchCurrentY}px) rotate(${sTouchCurrentX * 0.05}deg)`; }, {passive: true});
-sortTouchCard.addEventListener('touchend', e => {
-    if(!sIsDragging || isAnimating) return; sIsDragging = false; sortTouchCard.style.transition = 'transform 0.3s ease, opacity 0.3s ease'; 
-    if (sTouchCurrentY < -80 && Math.abs(sTouchCurrentY) > Math.abs(sTouchCurrentX)) handleSortAction('keep');
-    else if (sTouchCurrentX > 80) handleSortAction('trade');
-    else if (sTouchCurrentX < -80) handleSortAction('transfer');
-    else sortTouchCard.style.transform = 'translate(0px, 0px) rotate(0deg)';
-    sTouchCurrentX = 0; sTouchCurrentY = 0;
-});
+
+if (sortTouchCard) {
+    sortTouchCard.addEventListener('touchstart', e => { if(isAnimating) return; sIsDragging = true; sTouchStartX = e.touches[0].clientX; sTouchStartY = e.touches[0].clientY; sortTouchCard.style.transition = 'none'; }, {passive: true});
+    sortTouchCard.addEventListener('touchmove', e => { if(!sIsDragging || isAnimating) return; sTouchCurrentX = e.touches[0].clientX - sTouchStartX; sTouchCurrentY = e.touches[0].clientY - sTouchStartY; sortTouchCard.style.transform = `translate(${sTouchCurrentX}px, ${sTouchCurrentY}px) rotate(${sTouchCurrentX * 0.05}deg)`; }, {passive: true});
+    sortTouchCard.addEventListener('touchend', e => {
+        if(!sIsDragging || isAnimating) return; sIsDragging = false; sortTouchCard.style.transition = 'transform 0.3s ease, opacity 0.3s ease'; 
+        if (sTouchCurrentY < -80 && Math.abs(sTouchCurrentY) > Math.abs(sTouchCurrentX)) handleSortAction('keep');
+        else if (sTouchCurrentX > 80) handleSortAction('trade');
+        else if (sTouchCurrentX < -80) handleSortAction('transfer');
+        else sortTouchCard.style.transform = 'translate(0px, 0px) rotate(0deg)';
+        sTouchCurrentX = 0; sTouchCurrentY = 0;
+    });
+}

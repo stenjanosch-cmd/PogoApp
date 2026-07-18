@@ -1,26 +1,34 @@
-// spawner.js - Hochauflösend, Trainer-Größen gefixt & Witzige Verfolgungsjagden
+// ==============================================
+// DATEI: spawner.js (Event-Ready)
+// ==============================================
 
 const walkers = ['pikachu', 'bulbasaur', 'charmander', 'squirtle', 'eevee', 'snorlax', 'meowth', 'psyduck', 'slowpoke', 'totodile', 'cyndaquil', 'lucario', 'jigglypuff'];
 const flyers = ['gengar', 'mew', 'charizard', 'pidgeot', 'dragonite', 'butterfree', 'zubat', 'lugia', 'ho-oh', 'rayquaza'];
 const trainers = ['red', 'ethan', 'lyra', 'brendan', 'may', 'lucas', 'dawn', 'hilbert', 'hilda', 'cynthia', 'steven', 'giovanni', 'rocketgrunt', 'rocketgruntf', 'ash'];
 
-// Holt alle gefangenen Pokémon aus dem lokalen Speicher
-function getCaughtPokemon() {
+let caughtPokemonCache = [];
+
+// Initiales Laden aus dem LocalStorage
+function initSpawnerCache() {
     let dex = JSON.parse(localStorage.getItem('pogo_dex_v6')) || {};
-    return Object.values(dex); 
+    caughtPokemonCache = Object.values(dex); 
+}
+initSpawnerCache();
+
+// EVENT-LISTENER: Wenn ein Pokémon im Spiel gefangen wird, merkt sich der Spawner das sofort!
+if (window.EventBus) {
+    EventBus.on('pokemonCaught', (data) => {
+        caughtPokemonCache.push(data.data);
+    });
 }
 
 function spawnRandomEvent() {
     const container = document.getElementById('bg-animations');
     if (!container) return;
 
-    // Wenn gerade ein epischer Kampf stattfindet, Szene nicht stören
     if (container.classList.contains('encounter-active')) return;
-    
-    // Maximal 2 normale Pokémon gleichzeitig
     if (document.querySelectorAll('.poke-move-wrapper').length >= 2) return;
 
-    // 30% Chance auf einen Trainer-Kampf, sonst normales Spawnen
     const isScreenEmpty = document.querySelectorAll('.poke-move-wrapper').length === 0;
     if (isScreenEmpty && Math.random() < 0.3) {
         spawnTrainerEncounter(container);
@@ -29,18 +37,15 @@ function spawnRandomEvent() {
     }
 }
 
-// --- 1. DAS TRAINER-EVENT (VERFOLGUNGSJAGD) ---
 function spawnTrainerEncounter(container) {
     container.classList.add('encounter-active'); 
 
     const trainerName = trainers[Math.floor(Math.random() * trainers.length)];
-    // Für Kämpfe nehmen wir nur Boden-Pokémon
     const pokeName = walkers[Math.floor(Math.random() * walkers.length)]; 
 
     const meetLeft = (window.innerWidth / 2) - 100;
     const meetRight = (window.innerWidth / 2) + 100;
 
-    // TRAINER AUFBAUEN (Jetzt deutlich größer!)
     const trainerWrap = document.createElement('div');
     trainerWrap.className = 'poke-move-wrapper';
     trainerWrap.style.bottom = '5%'; trainerWrap.style.zIndex = '5';
@@ -48,7 +53,6 @@ function spawnTrainerEncounter(container) {
     const trainerFlip = document.createElement('div');
     const trainerImg = document.createElement('img');
     trainerImg.src = `https://play.pokemonshowdown.com/sprites/trainers/${trainerName}.png`;
-    // GRÖSSEN-FIX: Trainer auf 140px vergrößert, pixelated damit es nicht verschwimmt
     trainerImg.style.height = '140px'; 
     trainerImg.style.imageRendering = 'pixelated';
     trainerImg.style.transformOrigin = 'bottom center';
@@ -57,12 +61,11 @@ function spawnTrainerEncounter(container) {
     trainerWrap.appendChild(trainerFlip);
     container.appendChild(trainerWrap);
 
-    // POKÉMON AUFBAUEN
     const pokeWrap = document.createElement('div');
     pokeWrap.className = 'poke-move-wrapper';
     pokeWrap.style.bottom = '5%'; pokeWrap.style.zIndex = '5';
     const pokeFlip = document.createElement('div');
-    pokeFlip.style.transform = 'scaleX(-1)'; // Schaut nach links zum Trainer
+    pokeFlip.style.transform = 'scaleX(-1)';
     const pokeImg = document.createElement('img');
     pokeImg.src = `https://play.pokemonshowdown.com/sprites/ani/${pokeName}.gif`;
     pokeImg.style.height = 'auto'; pokeImg.style.width = 'auto';
@@ -75,15 +78,13 @@ function spawnTrainerEncounter(container) {
     pokeWrap.appendChild(pokeFlip);
     container.appendChild(pokeWrap);
 
-    // 1. BEIDE LAUFEN ZUR MITTE
     trainerWrap.animate([{ transform: `translateX(-200px)` }, { transform: `translateX(${meetLeft}px)` }], { duration: 3000, fill: 'forwards' });
     let pWalk = pokeWrap.animate([{ transform: `translateX(${window.innerWidth + 200}px)` }, { transform: `translateX(${meetRight}px)` }], { duration: 3000, fill: 'forwards' });
 
     pWalk.onfinish = () => {
-        trainerImg.style.animationPlayState = 'paused'; // Stehen bleiben
+        trainerImg.style.animationPlayState = 'paused'; 
         pokeImg.style.animationPlayState = 'paused';
         
-        // 2. POKÉBALL WERFEN
         setTimeout(() => {
             const ball = document.createElement('img');
             ball.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png';
@@ -91,13 +92,11 @@ function spawnTrainerEncounter(container) {
             ball.style.zIndex = '10';
             container.appendChild(ball);
 
-            // Flugkurve
             ball.animate([{ left: `${meetLeft + 60}px` }, { left: `${meetRight - 10}px` }], { duration: 600, easing: 'linear', fill: 'forwards' });
             ball.animate([{ bottom: '80px' }, { bottom: '150px', offset: 0.5, easing: 'ease-out' }, { bottom: '20px', offset: 1, easing: 'ease-in' }], { duration: 600, fill: 'forwards' });
             let throwRot = ball.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { duration: 600, fill: 'forwards' });
 
             throwRot.onfinish = () => {
-                // 3. POKÉMON WIRD EINGESOGEN
                 pokeImg.animate([
                     { transform: 'scale(1.5)', opacity: 1, filter: 'brightness(1)' },
                     { transform: 'scale(0.1)', opacity: 0, filter: 'brightness(10)' }
@@ -106,7 +105,6 @@ function spawnTrainerEncounter(container) {
                     
                     ball.animate([{ bottom: '20px' }, { bottom: '10px' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
                         
-                        // 4. BALL WACKELT
                         let shakes = 0;
                         let shakeInt = setInterval(() => {
                             shakes++;
@@ -118,10 +116,9 @@ function spawnTrainerEncounter(container) {
                             if (shakes >= 3) {
                                 clearInterval(shakeInt);
                                 setTimeout(() => {
-                                    const isCaught = Math.random() > 0.4; // 60% Fangchance
+                                    const isCaught = Math.random() > 0.4; 
                                     
                                     if (isCaught) {
-                                        // ERFOLG! Trainer geht zufrieden weiter.
                                         ball.style.filter = 'brightness(0.5)'; 
                                         setTimeout(() => {
                                             ball.remove(); pokeWrap.remove();
@@ -131,7 +128,6 @@ function spawnTrainerEncounter(container) {
                                             };
                                         }, 1000);
                                     } else {
-                                        // AUSBRUCH & WITZIGE VERFOLGUNGSJAGD!
                                         ball.remove();
                                         pokeImg.style.display = 'block';
                                         pokeImg.animate([
@@ -139,23 +135,21 @@ function spawnTrainerEncounter(container) {
                                             { transform: 'scale(1.5)', opacity: 1, filter: 'brightness(1)' }
                                         ], { duration: 300, fill: 'forwards' });
                                         
-                                        // Pokémon gerät in Panik und rennt weg
-                                        pokeFlip.style.transform = 'scaleX(1)'; // Dreht sich um
+                                        pokeFlip.style.transform = 'scaleX(1)';
                                         pokeImg.style.animationPlayState = 'running';
-                                        pokeImg.style.animationDuration = '0.1s'; // Extrem schnelles Cartoon-Wippen
+                                        pokeImg.style.animationDuration = '0.1s'; 
                                         let pRun = pokeWrap.animate([{ transform: `translateX(${meetRight}px)` }, { transform: `translateX(${window.innerWidth + 200}px)` }], { duration: 1500, fill: 'forwards' });
                                         pRun.onfinish = () => pokeWrap.remove();
 
-                                        // Trainer ist geschockt (steht kurz still), dann rennt er wütend hinterher
                                         setTimeout(() => {
-                                            trainerFlip.style.transform = 'scaleX(1)'; // Sichert die Blickrichtung
+                                            trainerFlip.style.transform = 'scaleX(1)'; 
                                             trainerImg.style.animationPlayState = 'running';
-                                            trainerImg.style.animationDuration = '0.15s'; // Trainer rennt auch extrem schnell
+                                            trainerImg.style.animationDuration = '0.15s'; 
                                             let tRun = trainerWrap.animate([{ transform: `translateX(${meetLeft}px)` }, { transform: `translateX(${window.innerWidth + 200}px)` }], { duration: 1800, fill: 'forwards' });
                                             tRun.onfinish = () => {
                                                 trainerWrap.remove(); container.classList.remove('encounter-active');
                                             };
-                                        }, 400); // 400ms Schrecksekunde
+                                        }, 400);
                                     }
                                 }, 500);
                             }
@@ -167,11 +161,10 @@ function spawnTrainerEncounter(container) {
     };
 }
 
-// --- 2. NORMALE WANDERNDE POKÉMON ---
 function spawnWanderingPokemon(container) {
-    const caughtList = getCaughtPokemon();
     const isFlyer = Math.random() > 0.5;
-    const usePokedex = caughtList.length > 0 && Math.random() > 0.5;
+    // Wir nutzen jetzt den performanten Cache anstatt localStorage abzufragen
+    const usePokedex = caughtPokemonCache.length > 0 && Math.random() > 0.5;
 
     const moveWrapper = document.createElement('div'); moveWrapper.className = 'poke-move-wrapper';
     const flipWrapper = document.createElement('div'); flipWrapper.className = 'poke-flip-wrapper';
@@ -180,7 +173,7 @@ function spawnWanderingPokemon(container) {
     img.onerror = () => { if (moveWrapper && moveWrapper.parentNode) moveWrapper.remove(); };
 
     if (usePokedex) {
-        let randomCaught = caughtList[Math.floor(Math.random() * caughtList.length)];
+        let randomCaught = caughtPokemonCache[Math.floor(Math.random() * caughtPokemonCache.length)];
         img.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${randomCaught.baseId}.gif`;
     } else {
         const pokeList = isFlyer ? flyers : walkers;
@@ -190,7 +183,6 @@ function spawnWanderingPokemon(container) {
 
     img.className = isFlyer ? 'poke-fly' : 'poke-walk';
     
-    // Proportionen sichern
     img.style.height = 'auto'; img.style.width = 'auto';
     img.style.transform = 'scale(1.5)'; img.style.transformOrigin = 'bottom center'; 
     moveWrapper.style.zIndex = Math.floor(Math.random() * 4) + 1;
@@ -238,7 +230,6 @@ function spawnWanderingPokemon(container) {
     }
 }
 
-// --- 3. DER ZENTRALE SPAWNER-TICKER ---
 function startPokemonSpawner() {
     setTimeout(() => {
         spawnRandomEvent();

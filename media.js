@@ -1,4 +1,6 @@
-// media.js - Ausgelagerte Logik für Musik und Intro-Hintergründe
+// ==============================================
+// DATEI: media.js (Event-Ready)
+// ==============================================
 
 const bgList = [
     'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pokemon_world_landscape_rolling_%E2%80%A6_202607141413.jpeg?raw=true',
@@ -64,6 +66,9 @@ function initAudio() {
     }
 }
 
+// Wird für die Zukunft dem globalen Scope zugewiesen, falls Buttons darauf zugreifen
+window.initAudio = initAudio;
+
 function startMusicPlayer() {
     if (isFirstSongPlayed) return; 
     
@@ -79,6 +84,7 @@ function startMusicPlayer() {
 
     currentPlayer.addEventListener('timeupdate', handleTimeUpdate);
 }
+window.startMusicPlayer = startMusicPlayer;
 
 function handleTimeUpdate(e) {
     const player = e.target;
@@ -147,3 +153,4 @@ function toggleMute() {
         muteBtn.style.borderColor = isMuted ? '#e74c3c' : '#ffcb05'; 
     }
 }
+window.toggleMute = toggleMute;
