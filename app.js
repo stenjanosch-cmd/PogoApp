@@ -67,7 +67,8 @@ function setDynamicBackground(screenId, mode) {
     if (screenId === 'screen-sort') bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pok%C3%A9mon_storage_room_UI_202607161335.jpeg?raw=true';
     else if (screenId === 'screen-game' && ['attack','defend','guess','weather'].includes(mode)) bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pok%C3%A9mon_training_gym_interior_202607161334.jpeg?raw=true';
     else if (screenId === 'screen-game' && ['rocket','radar','hardcore'].includes(mode)) bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pok%C3%A9mon_battle_stadium_combat_field_202607161335.jpeg?raw=true';
-    else if (['screen-cheatsheet', 'screen-pokedex', 'screen-camp', 'screen-camp-select'].includes(screenId)) bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Tools_and_Sammlung_room_202607161335.jpeg?raw=true';
+    else if (['screen-cheatsheet', 'screen-pokedex', 'screen-camp', 'screen-camp-select', 'screen-rogue-setup', 'screen-rogue-loot'].includes(screenId)) bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Tools_and_Sammlung_room_202607161335.jpeg?raw=true';
+    else if (screenId === 'screen-rogue-battle') bg = 'https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/Pok%C3%A9mon_battle_stadium_combat_field_202607161335.jpeg?raw=true';
     document.body.style.backgroundImage = `url('${bg}')`;
 }
 
@@ -101,12 +102,10 @@ function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
     setDynamicBackground(screenId, null);
-    
-    // Funkt an alle abgekapselten Module (Cheatsheet, Camp etc.)
     EventBus.emit('screenChanged', { screen: screenId });
 }
 
-let currentMode = 'attack'; let currentPokemonTypes = []; let currentEnemyAttackType = ''; let currentPokemonId = null; let currentBaseId = null; let currentPokemonName = ''; let currentPokemonImg = ''; let firstAttempt = true; let guessedTypesArray = []; let currentRocket = null; let timer = null; let timeLeft = 0; let rocketShuffleBag = [];
+let currentMode = 'attack'; let currentPokemonTypes = []; let currentEnemyAttackType = ''; let currentPokemonId = null; let currentBaseId = null; let currentPokemonName = ''; let currentPokemonImg = ''; let currentIsShiny = false; let firstAttempt = true; let guessedTypesArray = []; let currentRocket = null; let timer = null; let timeLeft = 0; let rocketShuffleBag = [];
 
 const typeTranslations = { normal: "Normal", fire: "Feuer", water: "Wasser", electric: "Elektro", grass: "Pflanze", ice: "Eis", fighting: "Kampf", poison: "Gift", ground: "Boden", flying: "Flug", psychic: "Psycho", bug: "Käfer", rock: "Gestein", ghost: "Geist", dragon: "Drache", dark: "Unlicht", steel: "Stahl", fairy: "Fee" };
 const typeColors = { normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', electric: '#F7D02C', grass: '#7AC74C', ice: '#96D9D6', fighting: '#C22E28', poison: '#A33EA1', ground: '#E2BF65', flying: '#A98FF3', psychic: '#F95587', bug: '#A6B91A', rock: '#B6A136', ghost: '#735797', dragon: '#6F35FC', dark: '#705898', steel: '#B7B7CE', fairy: '#D685AD' };
@@ -132,7 +131,13 @@ function showPokedex() {
     document.getElementById('dex-stats').innerText = `${Object.keys(pokedex).length} / 1025`;
     for(let i=1; i<=1025; i++) {
         let d = document.createElement('div');
-        if(pokedex[i]) { d.className = 'dex-entry caught'; d.onclick = () => window.open(`https://db.pokemongohub.net/pokemon/${pokedex[i].baseId}`, '_blank'); d.innerHTML = `<img class="dex-img" src="${pokedex[i].img}"><div class="dex-id">#${i}</div><div class="dex-name">${pokedex[i].name}</div>`; } 
+        if(pokedex[i]) { 
+            let shinyClass = pokedex[i].isShiny ? ' shiny' : '';
+            let displayName = pokedex[i].isShiny ? `✨ ${pokedex[i].name} ✨` : pokedex[i].name;
+            d.className = 'dex-entry caught' + shinyClass; 
+            d.onclick = () => window.open(`https://db.pokemongohub.net/pokemon/${pokedex[i].baseId}`, '_blank'); 
+            d.innerHTML = `<img class="dex-img" src="${pokedex[i].img}"><div class="dex-id">#${i}</div><div class="dex-name">${displayName}</div>`; 
+        } 
         else { d.className = 'dex-entry'; d.innerHTML = `<div style="font-size: 16px; color: #555;">?</div><div class="dex-id">#${i}</div><div class="dex-name" style="color: #555;">???</div>`; }
         grid.appendChild(d);
     }
@@ -151,14 +156,11 @@ setupButtons();
 function fetchNextEncounter() { if (currentMode === 'rocket') fetchRocketEncounter(); else if (currentMode === 'weather') fetchWeatherEncounter(); else fetchRandomPokemon(); }
 
 function resetUI() {
-    firstAttempt = true; guessedTypesArray = []; 
+    firstAttempt = true; guessedTypesArray = []; currentIsShiny = false;
     document.getElementById("loading").style.display = "block"; 
-    
     document.getElementById("pokemon-container").classList.remove('radar-spotlight');
-    
     const pokeImg = document.getElementById("pokemon-image");
-    pokeImg.style.display = "none"; 
-    pokeImg.classList.remove('silhouette'); 
+    pokeImg.style.display = "none"; pokeImg.classList.remove('silhouette'); 
     
     document.getElementById("rocket-image").style.display = "none"; document.getElementById("rocket-avatar").style.display = "none"; document.getElementById("weather-icon").style.display = "none"; document.getElementById("rocket-speech").style.display = "none"; document.getElementById("pokemon-name").innerText = ""; document.getElementById("pokemon-types").innerHTML = ""; document.getElementById("feedback").style.display = "none"; document.getElementById("feedback-reason").innerHTML = ""; document.getElementById("next-btn").style.display = "none"; document.getElementById("buttons").style.display = "grid"; document.getElementById("name-buttons").style.display = "none";
     if(timer) { clearInterval(timer); document.getElementById('timer-display').innerText = ""; }
@@ -204,17 +206,21 @@ async function fetchRandomPokemon() {
         }
         currentPokemonName = data.name.replace('-', ' ').toUpperCase(); 
         try { const speciesRes = await fetch(data.species.url); const deNameObj = (await speciesRes.json()).names.find(n => n.language.name === 'de'); if (deNameObj) currentPokemonName = deNameObj.name; } catch(e) {}
-        currentPokemonImg = data.sprites.other['official-artwork'].front_default || data.sprites.front_default;
+        
+        currentIsShiny = Math.random() < 0.05;
+        if (currentIsShiny) currentPokemonImg = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${currentBaseId}.png`;
+        else currentPokemonImg = data.sprites.other['official-artwork'].front_default || data.sprites.front_default;
         
         const pokeImg = document.getElementById("pokemon-image");
         pokeImg.src = currentPokemonImg; 
         pokeImg.onload = () => { document.getElementById("loading").style.display = "none"; pokeImg.style.display = "block"; };
-        document.getElementById("pokemon-name").innerText = currentPokemonName; const tc = document.getElementById("pokemon-types");
+        
+        let displayName = currentIsShiny ? `✨ ${currentPokemonName} ✨` : currentPokemonName;
+        document.getElementById("pokemon-name").innerText = displayName; 
+        const tc = document.getElementById("pokemon-types");
         
         if(currentMode === 'radar') {
-            document.getElementById("pokemon-container").classList.add('radar-spotlight');
-            pokeImg.classList.add('silhouette'); 
-            
+            document.getElementById("pokemon-container").classList.add('radar-spotlight'); pokeImg.classList.add('silhouette'); 
             document.getElementById("pokemon-name").innerText = "???"; document.getElementById("buttons").style.display = "none"; document.getElementById("name-buttons").style.display = "grid"; document.getElementById("game-subtitle").innerHTML = "Wer ist das Pokémon?"; generateNameOptions(currentPokemonName);
         } else {
             if (currentMode === 'attack' || currentMode === 'hardcore') { currentPokemonTypes.forEach(type => { let badge = document.createElement("div"); badge.className = "type-badge"; badge.style.backgroundColor = typeColors[type]; badge.innerText = typeTranslations[type]; tc.appendChild(badge); }); } 
@@ -233,23 +239,22 @@ async function generateNameOptions(correctName) {
 
 function checkRadarAnswer(selected, correct) {
     const pokeImg = document.getElementById("pokemon-image");
+    document.getElementById("pokemon-container").classList.remove('radar-spotlight'); pokeImg.classList.remove('silhouette'); 
     
-    document.getElementById("pokemon-container").classList.remove('radar-spotlight');
-    pokeImg.classList.remove('silhouette'); 
+    let displayName = currentIsShiny ? `✨ ${currentPokemonName} ✨` : currentPokemonName;
+    document.getElementById("pokemon-name").innerText = displayName;
     
-    document.getElementById("pokemon-name").innerText = currentPokemonName;
     const tc = document.getElementById("pokemon-types"); tc.innerHTML = "";
     currentPokemonTypes.forEach(type => { let badge = document.createElement("div"); badge.className = "type-badge"; badge.style.backgroundColor = typeColors[type]; badge.innerText = typeTranslations[type]; tc.appendChild(badge); });
     const fb = document.getElementById("feedback"); const fbMain = document.getElementById("feedback-main");
     fb.style.display = "block"; document.getElementById("next-btn").style.display = "inline-block";
+    
     if(selected.toLowerCase() === correct.toLowerCase()) { 
-        if (!pokedex[currentPokemonId]) { 
-            pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes }; 
-            localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); 
-            EventBus.emit('pokemonCaught', { id: currentPokemonId, data: pokedex[currentPokemonId] });
+        if (!pokedex[currentPokemonId] || (currentIsShiny && !pokedex[currentPokemonId].isShiny)) { 
+            pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes, isShiny: currentIsShiny || (pokedex[currentPokemonId] && pokedex[currentPokemonId].isShiny) }; 
+            localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); EventBus.emit('pokemonCaught', { id: currentPokemonId, data: pokedex[currentPokemonId] });
         } 
-        addXp(15); 
-        fbMain.innerHTML = `Gefangen! ${iconPokeball}<br>Es ist ${correct}!`; fb.style.backgroundColor = "rgba(46, 204, 113, 0.7)"; fb.style.border = "2px solid #2ecc71"; 
+        addXp(15); fbMain.innerHTML = `Gefangen! ${iconPokeball}<br>Es ist ${correct}!`; fb.style.backgroundColor = "rgba(46, 204, 113, 0.7)"; fb.style.border = "2px solid #2ecc71"; 
     } 
     else { fbMain.innerHTML = "❌ Geflüchtet...<br>Es war " + correct + "."; fb.style.backgroundColor = "rgba(231, 76, 60, 0.7)"; fb.style.border = "2px solid #e74c3c"; }
     document.querySelectorAll('.name-btn').forEach(b => b.disabled = true);
@@ -268,10 +273,9 @@ function checkAnswer(userSelectedType) {
             if (guessedTypesArray.length === currentPokemonTypes.length) { 
                 if(firstAttempt) { 
                     catchPrefix = `Perfekt! ${iconPokeball}<br>`; 
-                    if (!pokedex[currentPokemonId]) { 
-                        pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes }; 
-                        localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); 
-                        EventBus.emit('pokemonCaught', { id: currentPokemonId, data: pokedex[currentPokemonId] });
+                    if (!pokedex[currentPokemonId] || (currentIsShiny && !pokedex[currentPokemonId].isShiny)) { 
+                        pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes, isShiny: currentIsShiny || (pokedex[currentPokemonId] && pokedex[currentPokemonId].isShiny) }; 
+                        localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); EventBus.emit('pokemonCaught', { id: currentPokemonId, data: pokedex[currentPokemonId] });
                     } 
                     addXp(15); firstAttempt=false; 
                 } 
@@ -290,10 +294,9 @@ function checkAnswer(userSelectedType) {
     if (firstAttempt && currentMode !== 'rocket' && currentMode !== 'weather') { 
         if (isSuccess) { 
             catchPrefix = `Gefangen! ${usedBall}<br>`; 
-            if (!pokedex[currentPokemonId]) { 
-                pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes }; 
-                localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); 
-                EventBus.emit('pokemonCaught', { id: currentPokemonId, data: pokedex[currentPokemonId] });
+            if (!pokedex[currentPokemonId] || (currentIsShiny && !pokedex[currentPokemonId].isShiny)) { 
+                pokedex[currentPokemonId] = { name: currentPokemonName, img: currentPokemonImg, baseId: currentBaseId, types: currentPokemonTypes, isShiny: currentIsShiny || (pokedex[currentPokemonId] && pokedex[currentPokemonId].isShiny) }; 
+                localStorage.setItem('pogo_dex_v6', JSON.stringify(pokedex)); EventBus.emit('pokemonCaught', { id: currentPokemonId, data: pokedex[currentPokemonId] });
             } 
         } else if (!isSuccess) { catchPrefix = "❌ Geflüchtet...<br>"; } 
     } 

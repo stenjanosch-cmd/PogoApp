@@ -66,21 +66,6 @@
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-        /* ============================================== */
-        /* NEU: RAIDS & DYNARAIDS (MOBILE FIX)            */
-        /* ============================================== */
-        .raid-boss-avatar { width: 70px; height: 70px; filter: drop-shadow(0 0 15px #9b59b6); animation: hover 2s infinite alternate ease-in-out; margin: 5px 0; }
-        .raid-egg { font-size: 60px; animation: pulseCrypto 2s infinite alternate; filter: drop-shadow(0 0 20px #e67e22); margin: 5px 0;}
-        @keyframes hover { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
-        @keyframes pulseCrypto { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
-
-        .raid-slot { width: 45px; height: 45px; background: rgba(0,0,0,0.5); border: 2px dashed #f1c40f; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #7f8c8d; position: relative;}
-        .raid-slot img { width: 35px; height: 35px; object-fit: contain; z-index: 2; }
-        .raid-slot.filled { border-style: solid; background: radial-gradient(circle, rgba(241, 196, 15, 0.2), rgba(0,0,0,0.8)); cursor: pointer;}
-        .raid-slot.filled::after { content: '❌'; position: absolute; top: -5px; right: -5px; font-size: 10px; background: red; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; z-index: 10; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.5);}
-
-        .dex-entry.selected-for-raid { border-color: #8e44ad; background: rgba(142, 68, 173, 0.3); opacity: 0.5; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -130,6 +115,12 @@
                 </div>
             </div>
 
+            <!-- NEUER ROGUE MODUS BUTTON -->
+            <div class="section-title">Endlos-Modus</div>
+            <div class="menu-grid">
+                <button class="menu-btn" onclick="startRogueSetup()" style="grid-column: span 2; background: linear-gradient(135deg, #16a085, #2c3e50); border: 2px solid #2ecc71; font-size: 14px;">🏰 Rogue-Expedition (Kampf)</button>
+            </div>
+
             <div class="section-title">Box-Management</div>
             <div class="menu-grid">
                 <button class="menu-btn btn-sort" onclick="startSortGame()">📦 Behalten oder Weg?</button>
@@ -174,7 +165,7 @@
                 <div id="willow-overlay" onclick="closeWillow()">
                     <div class="willow-container">
                         <div class="willow-speech" id="willow-text">Text</div>
-                        <img class="willow-img" src="https://github.com/stenjanosch-cmd/PogoApp/blob/main/150px-Professor_Willow.png?raw=true" alt="Prof Willow">
+                        <img class="willow-img" src="https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/150px-Professor_Willow.png?raw=true" alt="Prof Willow">
                     </div>
                     <div style="font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 15px; font-weight: bold; text-transform: uppercase;">(Tippen zum Fortfahren)</div>
                 </div>
@@ -263,9 +254,7 @@
 
             <!-- TAB: RAIDS -->
             <div id="camp-tab-raids" class="camp-tab-content">
-                <div id="raids-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                    <!-- Wird durch raids.js befüllt -->
-                </div>
+                <div id="raids-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
             </div>
             
             <!-- TAB: SHOP -->
@@ -332,6 +321,99 @@
             </div>
         </div>
 
+        <!-- ========================================== -->
+        <!-- NEU: ROGUE MODUS SCREENS                   -->
+        <!-- ========================================== -->
+        
+        <!-- ROGUE TEAM AUSWAHL (Phase 1) -->
+        <div id="screen-rogue-setup" class="screen camp-select-layout">
+            <div class="top-nav">
+                <button class="back-btn" onclick="showScreen('screen-menu')">⮌ Abbruch</button>
+                <div style="font-family: 'Righteous'; color: #2ecc71; font-size: 18px;">Rogue Team</div>
+            </div>
+            
+            <div style="background: rgba(0,0,0,0.5); padding: 8px; border-bottom: 2px solid #2ecc71; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <p style="margin: 0; font-size: 10px; color: #ccc;">Wähle 3 Pokémon für deinen Endlos-Run!</p>
+                
+                <div style="display: flex; justify-content: center; align-items: center; gap: 15px; width: 100%;">
+                    <div style="display: flex; gap: 8px;" id="rogue-team-slots">
+                        <div class="raid-slot" id="rogue-slot-0">1</div>
+                        <div class="raid-slot" id="rogue-slot-1">2</div>
+                        <div class="raid-slot" id="rogue-slot-2">3</div>
+                    </div>
+                    <button id="start-rogue-btn" class="camp-action-btn disabled" disabled style="padding: 10px 15px; font-size: 12px; width: auto; margin: 0; background-color: #2ecc71; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">Run Starten!</button>
+                </div>
+            </div>
+
+            <div style="flex: 1; width: 100%; overflow-y: auto; padding: 10px; box-sizing: border-box; padding-bottom: 40px;">
+                <div class="pokedex-grid" id="rogue-select-grid"></div>
+            </div>
+        </div>
+
+        <!-- ROGUE BATTLE ARENA (Phase 2) -->
+        <div id="screen-rogue-battle" class="screen">
+            <div class="top-nav">
+                <button class="back-btn" onclick="surrenderRogue()">⮌ Flucht</button>
+                <div style="font-family: 'Righteous'; color: white; font-size: 18px; text-shadow: 2px 2px 4px black;" id="rogue-wave-display">Welle 1</div>
+            </div>
+            
+            <div class="rogue-arena" id="rogue-arena">
+                <!-- Gegner HUD (Oben Rechts) -->
+                <div class="rogue-hud enemy-hud">
+                    <div class="rogue-hud-name" id="rogue-enemy-name">Lade...</div>
+                    <div class="rogue-hp-bar-bg"><div class="rogue-hp-bar-fill" id="rogue-enemy-hp"></div></div>
+                </div>
+                <img id="rogue-enemy-sprite" class="rogue-sprite-enemy" src="">
+
+                <!-- Spieler HUD (Unten Links) -->
+                <div class="rogue-hud player-hud">
+                    <div class="rogue-hud-name" id="rogue-player-name">Lade...</div>
+                    <div class="rogue-hp-bar-bg"><div class="rogue-hp-bar-fill" id="rogue-player-hp"></div></div>
+                    <div class="rogue-ep-bar-bg"><div class="rogue-ep-bar-fill" id="rogue-player-ep"></div></div>
+                </div>
+                <img id="rogue-player-sprite" class="rogue-sprite-player" src="">
+                
+                <!-- Schadenszahlen & Effekte -->
+                <div id="rogue-dmg-text" class="rogue-dmg-text"></div>
+            </div>
+            
+            <!-- Log Area -->
+            <div class="rogue-log" id="rogue-log">Wilde Begegnung startet!</div>
+            
+            <!-- Controls -->
+            <div class="rogue-controls" id="rogue-controls">
+                <button id="rogue-btn-fast" class="rogue-atk-btn" onclick="roguePlayerAttack('fast')">
+                    <div style="font-size: 10px;">Sofort-Attacke</div>
+                    <div id="rogue-fast-type" style="font-size: 14px; font-weight: 900;">Typ</div>
+                </button>
+                <button id="rogue-btn-charge" class="rogue-atk-btn disabled" disabled onclick="roguePlayerAttack('charge')">
+                    <div style="font-size: 10px;">Lade-Attacke</div>
+                    <div id="rogue-charge-type" style="font-size: 14px; font-weight: 900;">Typ</div>
+                </button>
+                
+                <!-- WECHSEL BUTTON -->
+                <button class="rogue-atk-btn" style="grid-column: span 2; background: linear-gradient(135deg, #34495e, #2c3e50); border-color: #3498db; padding: 6px;" onclick="openRogueSwitchMenu(false)">
+                    🔄 Pokémon wechseln
+                </button>
+            </div>
+            
+            <div id="rogue-switch-menu" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <!-- Wird dynamisch mit toten/lebendigen Pokemon gefüllt -->
+            </div>
+        </div>
+
+        <!-- ROGUE LOOT SHOP (Phase 3) -->
+        <div id="screen-rogue-loot" class="screen">
+            <div class="top-nav">
+                <div style="font-family: 'Righteous'; color: #f1c40f; font-size: 24px; width: 100%; text-align: center;">Welle geschafft!</div>
+            </div>
+            <p class="subtitle">Wähle deine Belohnung für die nächste Welle:</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;" id="rogue-loot-container">
+                <!-- Loot Cards go here -->
+            </div>
+        </div>
+
     </div>
 
     <script src="app.js"></script>
@@ -341,5 +423,6 @@
     <script src="spawner.js"></script>
     <script src="camp.js"></script>
     <script src="raids.js"></script>
+    <script src="rogue.js"></script>
 </body>
 </html>
