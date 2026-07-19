@@ -76,7 +76,7 @@
             <div style="content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); border-width: 10px 10px 0; border-style: solid; border-color: white transparent transparent transparent;"></div>
         </div>
         <img src="https://github.com/stenjanosch-cmd/PogoApp/blob/main/150px-Professor_Willow.png?raw=true" style="width: 90px; margin-top: 15px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));" alt="Prof Willow">
-        <div style="color: rgba(255,255,255,0.6); font-size: 10px; text-transform: uppercase; font-weight: 900; margin-top: 10px; letter-spacing: 1px;">(Tippen zum Schließen)</div>
+        <div id="willow-close-hint" style="color: rgba(255,255,255,0.6); font-size: 10px; text-transform: uppercase; font-weight: 900; margin-top: 10px; letter-spacing: 1px;">(Tippen zum Schließen)</div>
     </div>
 
     <!-- SCHWESTER JOY OVERLAY -->
@@ -115,7 +115,7 @@
                 </div>
             </div>
 
-            <!-- NEUER ROGUE MODUS BUTTON -->
+            <!-- ROGUE MODUS BUTTON -->
             <div class="section-title">Endlos-Modus</div>
             <div class="menu-grid">
                 <button class="menu-btn" onclick="startRogueSetup()" style="grid-column: span 2; background: linear-gradient(135deg, #16a085, #2c3e50); border: 2px solid #2ecc71; font-size: 14px;">🏰 Rogue-Expedition (Kampf)</button>
@@ -161,13 +161,6 @@
                 <div class="sort-card" id="sort-card">
                     <img class="sort-img" id="sort-img" src="" alt="Pokemon">
                     <div class="sort-name" id="sort-name">Lade...</div>
-                </div>
-                <div id="willow-overlay" onclick="closeWillow()">
-                    <div class="willow-container">
-                        <div class="willow-speech" id="willow-text">Text</div>
-                        <img class="willow-img" src="https://github.com/stenjanosch-cmd/Pogo-Trainer/blob/main/150px-Professor_Willow.png?raw=true" alt="Prof Willow">
-                    </div>
-                    <div style="font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 15px; font-weight: bold; text-transform: uppercase;">(Tippen zum Fortfahren)</div>
                 </div>
             </div>
 
@@ -266,7 +259,6 @@
             <div id="camp-tab-inventory" class="camp-tab-content">
                 <div id="inventory-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
                 
-                <!-- Encounter Area für Lockmodule -->
                 <div id="camp-encounter-area" style="display: none; flex-direction: column; align-items: center; background: rgba(0,0,0,0.8); border: 2px solid #a29bfe; border-radius: 15px; padding: 20px; margin-top: 20px; width: 95%; max-width: 450px; box-shadow: 0 0 15px rgba(162, 155, 254, 0.5);">
                     <div id="camp-encounter-loading" style="color: white; font-weight: bold; margin-bottom: 10px; display: none;">Signal wird gesendet...</div>
                     <img id="camp-encounter-img" src="" alt="?" style="width: 150px; height: 150px; filter: drop-shadow(0 0 10px white);">
@@ -325,7 +317,7 @@
         <!-- NEU: ROGUE MODUS SCREENS                   -->
         <!-- ========================================== -->
         
-        <!-- ROGUE TEAM AUSWAHL (Phase 1) -->
+        <!-- ROGUE TEAM AUSWAHL -->
         <div id="screen-rogue-setup" class="screen camp-select-layout">
             <div class="top-nav">
                 <button class="back-btn" onclick="showScreen('screen-menu')">⮌ Abbruch</button>
@@ -350,7 +342,7 @@
             </div>
         </div>
 
-        <!-- ROGUE BATTLE ARENA (Phase 2) -->
+        <!-- ROGUE BATTLE ARENA -->
         <div id="screen-rogue-battle" class="screen">
             <div class="top-nav">
                 <button class="back-btn" onclick="surrenderRogue()">⮌ Flucht</button>
@@ -358,16 +350,18 @@
             </div>
             
             <div class="rogue-arena" id="rogue-arena">
-                <!-- Gegner HUD (Oben Rechts) -->
+                <!-- Gegner HUD -->
                 <div class="rogue-hud enemy-hud">
                     <div class="rogue-hud-name" id="rogue-enemy-name">Lade...</div>
+                    <div id="rogue-enemy-types" style="display: flex; gap: 4px; margin-bottom: 4px;"></div>
                     <div class="rogue-hp-bar-bg"><div class="rogue-hp-bar-fill" id="rogue-enemy-hp"></div></div>
                 </div>
                 <img id="rogue-enemy-sprite" class="rogue-sprite-enemy" src="">
 
-                <!-- Spieler HUD (Unten Links) -->
+                <!-- Spieler HUD -->
                 <div class="rogue-hud player-hud">
                     <div class="rogue-hud-name" id="rogue-player-name">Lade...</div>
+                    <div id="rogue-player-types" style="display: flex; gap: 4px; margin-bottom: 4px;"></div>
                     <div class="rogue-hp-bar-bg"><div class="rogue-hp-bar-fill" id="rogue-player-hp"></div></div>
                     <div class="rogue-ep-bar-bg"><div class="rogue-ep-bar-fill" id="rogue-player-ep"></div></div>
                 </div>
@@ -391,7 +385,6 @@
                     <div id="rogue-charge-type" style="font-size: 14px; font-weight: 900;">Typ</div>
                 </button>
                 
-                <!-- WECHSEL BUTTON -->
                 <button class="rogue-atk-btn" style="grid-column: span 2; background: linear-gradient(135deg, #34495e, #2c3e50); border-color: #3498db; padding: 6px;" onclick="openRogueSwitchMenu(false)">
                     🔄 Pokémon wechseln
                 </button>
@@ -402,7 +395,7 @@
             </div>
         </div>
 
-        <!-- ROGUE LOOT SHOP (Phase 3) -->
+        <!-- ROGUE LOOT SHOP -->
         <div id="screen-rogue-loot" class="screen">
             <div class="top-nav">
                 <div style="font-family: 'Righteous'; color: #f1c40f; font-size: 24px; width: 100%; text-align: center;">Welle geschafft!</div>

@@ -141,9 +141,9 @@ p.subtitle { color: #ecf0f1; margin-bottom: 10px; font-size: 12px; font-weight: 
 
 .rogue-arena {
     width: 100%;
-    height: 240px; /* Feste Höhe, damit sich das Bild berechenbar verhält */
-    background-size: 150%; /* Wir zoomen absichtlich etwas heraus, damit der Boden breiter wird */
-    background-position: center 85%; /* Wir fokussieren die Kamera hart auf den Boden */
+    height: 240px; 
+    background-size: 150%; 
+    background-position: center 85%; 
     background-repeat: no-repeat;
     border: 2px solid #2ecc71;
     border-radius: 15px;
@@ -156,12 +156,12 @@ p.subtitle { color: #ecf0f1; margin-bottom: 10px; font-size: 12px; font-weight: 
 
 @media (max-width: 450px) {
     .rogue-arena {
-        background-size: 180%; /* Auf sehr schmalen Handys noch weiter herauszoomen */
-        background-position: center 95%; /* Boden maximal in den Fokus rücken */
+        background-size: 180%; 
+        background-position: center 95%; 
     }
 }
 
-/* Responsive Sprites - Fest auf dem Boden platziert */
+/* Responsive Sprites */
 .rogue-sprite-enemy {
     position: absolute;
     top: 15%;
@@ -182,6 +182,30 @@ p.subtitle { color: #ecf0f1; margin-bottom: 10px; font-size: 12px; font-weight: 
     object-fit: contain;
     filter: drop-shadow(0px 15px 5px rgba(0,0,0,0.7));
 }
+
+/* --- KAMPF ANIMATIONEN --- */
+@keyframes lungePlayer {
+    0% { transform: translate(0, 0); }
+    50% { transform: translate(40px, -20px) scale(1.1); }
+    100% { transform: translate(0, 0); }
+}
+@keyframes lungeEnemy {
+    0% { transform: translate(0, 0); }
+    50% { transform: translate(-40px, 20px) scale(1.1); }
+    100% { transform: translate(0, 0); }
+}
+@keyframes hitShake {
+    0% { transform: translateX(0); filter: brightness(1) drop-shadow(0px 15px 5px rgba(0,0,0,0.7)); }
+    25% { transform: translateX(-10px); filter: brightness(2) drop-shadow(0 0 15px red); }
+    50% { transform: translateX(10px); }
+    75% { transform: translateX(-10px); }
+    100% { transform: translateX(0); filter: brightness(1) drop-shadow(0px 15px 5px rgba(0,0,0,0.7)); }
+}
+
+.anim-lunge-player { animation: lungePlayer 0.3s ease-in-out forwards !important; }
+.anim-lunge-enemy { animation: lungeEnemy 0.3s ease-in-out forwards !important; }
+.anim-hit { animation: hitShake 0.4s ease-in-out forwards !important; }
+
 
 /* Kompakte HUDs für Mobile */
 .rogue-hud {
