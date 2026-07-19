@@ -69,7 +69,7 @@
     </style>
 </head>
 <body>
-    <!-- GAME LAUNCHER / PATCHER (Startet als Erstes!) -->
+    <!-- GAME LAUNCHER / PATCHER -->
     <div id="game-launcher" style="position: fixed; top:0; left:0; width:100%; height:100%; background: #0d1b2a; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.5s ease;">
         <img src="https://github.com/stenjanosch-cmd/PogoApp/blob/main/150px-Professor_Willow.png?raw=true" style="width: 120px; filter: drop-shadow(0 0 15px rgba(52, 152, 219, 0.8)); margin-bottom: 20px; animation: floating 2s infinite alternate ease-in-out;">
         <h2 id="launcher-status" style="font-family: 'Righteous', cursive; color: #3498db; margin-bottom: 5px; text-transform: uppercase;">Server Check...</h2>
@@ -81,20 +81,29 @@
     </div>
 
     <script>
-        // Patcher Logic
+        // Patcher Logic mit Error-Scanner
         async function runGameLauncher() {
             const status = document.getElementById('launcher-status');
             const bar = document.getElementById('launcher-bar');
             const vText = document.getElementById('launcher-version');
             const launcher = document.getElementById('game-launcher');
+            const permDisplay = document.getElementById('app-version-display');
             
             // Lokale Version auslesen
             let localVersion = localStorage.getItem('pogo_app_version') || '0.0.0';
             bar.style.width = '20%';
             
+            vText.innerText = `Lokal: v${localVersion} | Server: Prüfe...`;
+            if(permDisplay) permDisplay.innerText = "v" + localVersion;
+            
             try {
-                // Den Server pingen (Der Timestamp am Ende zwingt den Browser, den Cache zu ignorieren!)
+                // Den Server pingen
                 let response = await fetch('version.json?t=' + new Date().getTime(), { cache: "no-store" });
+                
+                if (!response.ok) {
+                    throw new Error("HTTP " + response.status + " (Datei nicht gefunden)"); 
+                }
+                
                 let data = await response.json();
                 
                 bar.style.width = '60%';
@@ -105,20 +114,19 @@
                     status.style.color = "#f1c40f";
                     bar.style.width = '80%';
                     
-                    // 1. Service Worker hart beenden, damit alte Scripte nicht festgehalten werden
                     if ('serviceWorker' in navigator) {
                         let regs = await navigator.serviceWorker.getRegistrations();
                         for (let reg of regs) { await reg.unregister(); }
                     }
                     
-                    // 2. Browser Cache-Speicher komplett reinigen (Für CSS, Bilder & JS)
                     if ('caches' in window) {
                         let cacheNames = await caches.keys();
                         for (let name of cacheNames) { await caches.delete(name); }
                     }
                     
-                    // 3. Neue Version speichern und sauberen Neustart auslösen
                     localStorage.setItem('pogo_app_version', data.version);
+                    if(permDisplay) permDisplay.innerText = "v" + data.version; 
+                    
                     bar.style.width = '100%';
                     status.innerText = "Neustart...";
                     status.style.color = "#2ecc71";
@@ -128,7 +136,6 @@
                     }, 1500);
                     
                 } else {
-                    // Spiel ist auf dem neuesten Stand!
                     status.innerText = "Spiel ist bereit!";
                     status.style.color = "#2ecc71";
                     bar.style.width = '100%';
@@ -140,15 +147,27 @@
                     }, 1000);
                 }
             } catch (error) {
-                // Falls Offline oder GitHub gerade lädt
-                status.innerText = "Offline-Modus";
+                // FEHLER-SCANNER: Zeigt an, was genau schief lief
+                console.error("Patcher Fehler:", error);
+                
+                let errorMsg = error.message;
+                if(window.location.protocol === 'file:') {
+                    errorMsg = "Browser blockiert lokale Datei (file://)";
+                }
+                
+                status.innerText = "Update-Fehler!";
                 status.style.color = "#e74c3c";
+                vText.style.color = "#e74c3c";
+                vText.innerHTML = `Lokal: v${localVersion} <br><br> Grund: ${errorMsg}`; 
                 bar.style.width = '100%';
+                bar.style.background = '#e74c3c';
+                
+                // Bleibt 3 Sekunden stehen, damit du den Fehler lesen kannst
                 setTimeout(() => {
                     launcher.style.opacity = '0';
                     launcher.style.pointerEvents = 'none';
                     setTimeout(() => launcher.style.display = 'none', 500);
-                }, 1500);
+                }, 3000);
             }
         }
         
@@ -498,6 +517,11 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- DAUERHAFTE VERSIONSANZEIGE -->
+    <div id="app-version-display" style="position: fixed; bottom: 5px; right: 5px; color: rgba(255,255,255,0.4); font-size: 10px; z-index: 9000; pointer-events: none; font-weight: bold; font-family: 'Montserrat', sans-serif;">
+        v0.0.0
     </div>
 
     <script src="app.js"></script>

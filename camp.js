@@ -1,21 +1,42 @@
 let stardust = parseInt(localStorage.getItem('pogo_stardust')) || 0;
 const EXP_DURATION = 10 * 60 * 1000; // 10 Minuten pro Mission
 
-// Neues Inventar-System
-let inventory = JSON.parse(localStorage.getItem('pogo_inventory_v1')) || { lure_normal: 0, starpiece: 0, pinap: 0, revive: 0 };
-if (inventory.golden_razz !== undefined) delete inventory.golden_razz; // Alte Beeren restlos aus dem Cache löschen
+// Neues Inventar-System (inklusive Bälle Initialisierung)
+let inventory = JSON.parse(localStorage.getItem('pogo_inventory_v1')) || {};
+// Sicherstellen, dass alle Keys existieren, auch bei alten Saves
+inventory.lure_normal = inventory.lure_normal || 0;
+inventory.starpiece = inventory.starpiece || 0;
+inventory.pinap = inventory.pinap || 0;
+inventory.revive = inventory.revive || 0;
+inventory.pokeball = inventory.pokeball || 0;
+inventory.greatball = inventory.greatball || 0;
+inventory.ultraball = inventory.ultraball || 0;
+inventory.masterball = inventory.masterball || 0;
+
+if (inventory.golden_razz !== undefined) delete inventory.golden_razz;
 
 let exhausted = JSON.parse(localStorage.getItem('pogo_exhausted_v1')) || [];
 let starpieceActiveUntil = parseInt(localStorage.getItem('pogo_starpiece_time')) || 0;
 
 let isPinapSelected = false; // Temporärer Schalter bei der Pokémon-Auswahl
 
-const shopItems = {
+// Split in zwei Kategorien für bessere Übersicht
+const shopItemsCamp = {
     lure_normal: { name: "Lockmodul", icon: "🌸", desc: "Lockt ein garantiertes Pokémon an.", price: 1500, color: "#9b59b6" },
     starpiece: { name: "Sternenstück", icon: "⭐", desc: "+50% Sternenstaub auf alles (60 Min).", price: 1000, color: "#f1c40f" },
     pinap: { name: "Sananabeere", icon: "🍍", desc: "Verdoppelt den Ertrag einer Expedition.", price: 200, color: "#e67e22" },
     revive: { name: "Beleber", icon: "💊", desc: "Heilt ein erschöpftes Pokémon.", price: 100, color: "#e74c3c" }
 };
+
+const shopItemsRogue = {
+    pokeball: { name: "Pokéball", icon: "<img src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png' style='width:30px; filter: drop-shadow(0 2px 2px #000);'>", desc: "Endlos-Run: Fängt Gegner unter 30% HP.", price: 100, color: "#e74c3c" },
+    greatball: { name: "Superball", icon: "<img src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png' style='width:30px; filter: drop-shadow(0 2px 2px #000);'>", desc: "Endlos-Run: Fängt Gegner unter 50% HP.", price: 300, color: "#3498db" },
+    ultraball: { name: "Hyperball", icon: "<img src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png' style='width:30px; filter: drop-shadow(0 2px 2px #000);'>", desc: "Endlos-Run: Fängt Gegner unter 80% HP.", price: 800, color: "#f1c40f" },
+    masterball: { name: "Meisterball", icon: "<img src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png' style='width:30px; filter: drop-shadow(0 2px 2px #000);'>", desc: "Endlos-Run: Fängt das Pokémon garantiert.", price: 3000, color: "#9b59b6" }
+};
+
+// Kombiniertes Objekt für Einkaufs-Logik
+const allShopItems = { ...shopItemsCamp, ...shopItemsRogue };
 
 const biomeTemplates = [
     { name: "Vulkan", types: ["fire", "rock"], color1: "#EE8130", color2: "#B6A136", icon: "fire", baseDust: 150 },
@@ -116,17 +137,15 @@ function switchCampTab(tabName) {
 }
 
 // --- SHOP & INVENTAR RENDERING ---
-function renderShop() {
-    const container = document.getElementById('shop-container');
-    if (!container) return;
-    container.innerHTML = '';
+function renderShopSection(title, itemsObj) {
+    let html = `<div style="width: 100%; border-bottom: 2px solid rgba(255,255,255,0.2); margin: 15px 0 10px 0; color: #ffcb05; font-weight: 900; text-transform: uppercase; font-size: 14px; text-align: left; padding-left: 10px;">${title}</div>`;
     
-    Object.keys(shopItems).forEach(key => {
-        const item = shopItems[key];
-        container.innerHTML += `
+    Object.keys(itemsObj).forEach(key => {
+        const item = itemsObj[key];
+        html += `
             <div class="biome-card" style="border-color: ${item.color};">
                 <div class="biome-header" style="background: rgba(0,0,0,0.5);">
-                    <div style="font-size: 30px; margin-right: 15px;">${item.icon}</div>
+                    <div style="font-size: 30px; margin-right: 15px; min-width: 40px; display: flex; justify-content: center;">${item.icon}</div>
                     <div style="text-align: left;">
                         <div class="biome-title" style="font-size: 16px;">${item.name}</div>
                         <div style="font-size: 10px; color: #ccc;">${item.desc}</div>
@@ -138,6 +157,16 @@ function renderShop() {
             </div>
         `;
     });
+    return html;
+}
+
+function renderShop() {
+    const container = document.getElementById('shop-container');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    container.innerHTML += renderShopSection("🏕️ Camp & Expeditionen", shopItemsCamp);
+    container.innerHTML += renderShopSection("🎒 Rogue Endlos-Run Bälle", shopItemsRogue);
 }
 
 function renderInventory() {
@@ -149,7 +178,8 @@ function renderInventory() {
     Object.keys(inventory).forEach(key => {
         if(inventory[key] > 0) {
             hasItems = true;
-            const item = shopItems[key];
+            const item = allShopItems[key];
+            if(!item) return; // Fallback für alte Keys
             
             let actionBtn = '';
             if(key === 'lure_normal') actionBtn = `<button class="camp-action-btn" style="background: ${item.color}; margin-top: 10px;" onclick="useItem('${key}')">Aktivieren</button>`;
@@ -175,9 +205,9 @@ function renderInventory() {
 }
 
 function buyItem(itemKey) {
-    const item = shopItems[itemKey];
+    const item = allShopItems[itemKey];
     if(stardust < item.price) {
-        showCampWillow(`Dir fehlen leider noch Sternenstaub-Reserven für ein <b>${item.name}</b>. Gehe auf Expeditionen!`);
+        showCampWillow(`Dir fehlen leider noch Sternenstaub-Reserven für ein <b>${item.name}</b>. Gehe auf Expeditionen oder starte Endlos-Kämpfe!`);
         return;
     }
     stardust -= item.price;
@@ -193,7 +223,7 @@ function useItem(itemKey) {
     
     if(itemKey === 'starpiece') {
         inventory[itemKey]--;
-        starpieceActiveUntil = Date.now() + 60 * 60 * 1000; // 60 Minuten statt 30
+        starpieceActiveUntil = Date.now() + 60 * 60 * 1000;
         localStorage.setItem('pogo_starpiece_time', starpieceActiveUntil);
         saveInventory();
         renderInventory();
@@ -270,7 +300,7 @@ async function startLureEncounter() {
 document.getElementById('camp-encounter-btn').onclick = function() {
     if(!currentShopEncounterId) return;
     
-    const isCaught = true; // 100% Fangchance garantiert
+    const isCaught = true;
 
     document.getElementById('camp-encounter-name').innerText = currentShopEncounterName;
     this.disabled = true;
@@ -354,7 +384,6 @@ function openPokemonSelect(zoneId) {
     currentBiomeSelect = zoneId;
     isPinapSelected = false;
 
-    // Sananabeeren Toggle UI
     const pinapContainer = document.getElementById('pinap-toggle-container');
     const pinapBtn = document.getElementById('pinap-toggle-btn');
     if(inventory.pinap > 0) {
@@ -529,14 +558,12 @@ function resolveExpedition(zoneId) {
         }
     }
     
-    // Berechne Ertrag mit Buffs
     let finalDust = b.baseDust;
-    if (outgoingDamage > 1) finalDust *= 2; // Guter Konter = Doppelter Base Dust
-    if (exp.hasPinap) finalDust *= 2; // Sananabeere verdoppelt
-    if (Date.now() < starpieceActiveUntil) finalDust = Math.floor(finalDust * 1.5); // Sternenstück +50%
+    if (outgoingDamage > 1) finalDust *= 2; 
+    if (exp.hasPinap) finalDust *= 2; 
+    if (Date.now() < starpieceActiveUntil) finalDust = Math.floor(finalDust * 1.5); 
 
     if (incomingDamage > 1) {
-        // FATAL FAILURE: Pokémon wird erschöpft
         exhausted.push(String(exp.pkmId));
         localStorage.setItem('pogo_exhausted_v1', JSON.stringify(exhausted));
         showCampWillow(`Oh nein! <b>${b.name}</b> war zu gefährlich. Dein Pokémon hat katastrophal verloren und kam ohne Sternenstaub zurück. Es ist nun <b>erschöpft</b> und benötigt einen Beleber.`);
