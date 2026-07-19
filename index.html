@@ -69,6 +69,92 @@
     </style>
 </head>
 <body>
+    <!-- GAME LAUNCHER / PATCHER (Startet als Erstes!) -->
+    <div id="game-launcher" style="position: fixed; top:0; left:0; width:100%; height:100%; background: #0d1b2a; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.5s ease;">
+        <img src="https://github.com/stenjanosch-cmd/PogoApp/blob/main/150px-Professor_Willow.png?raw=true" style="width: 120px; filter: drop-shadow(0 0 15px rgba(52, 152, 219, 0.8)); margin-bottom: 20px; animation: floating 2s infinite alternate ease-in-out;">
+        <h2 id="launcher-status" style="font-family: 'Righteous', cursive; color: #3498db; margin-bottom: 5px; text-transform: uppercase;">Server Check...</h2>
+        <div style="font-size: 10px; color: #aaa; margin-bottom: 20px; font-weight: bold; letter-spacing: 1px;" id="launcher-version">Lokal: v? | Server: v?</div>
+        
+        <div style="width: 70%; max-width: 300px; height: 12px; background: rgba(0,0,0,0.5); border: 2px solid #555; border-radius: 10px; overflow: hidden; box-shadow: inset 0 0 5px black;">
+            <div id="launcher-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3498db, #2ecc71); transition: width 0.3s ease-out;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Patcher Logic
+        async function runGameLauncher() {
+            const status = document.getElementById('launcher-status');
+            const bar = document.getElementById('launcher-bar');
+            const vText = document.getElementById('launcher-version');
+            const launcher = document.getElementById('game-launcher');
+            
+            // Lokale Version auslesen
+            let localVersion = localStorage.getItem('pogo_app_version') || '0.0.0';
+            bar.style.width = '20%';
+            
+            try {
+                // Den Server pingen (Der Timestamp am Ende zwingt den Browser, den Cache zu ignorieren!)
+                let response = await fetch('version.json?t=' + new Date().getTime(), { cache: "no-store" });
+                let data = await response.json();
+                
+                bar.style.width = '60%';
+                vText.innerText = `Lokal: v${localVersion} | Server: v${data.version}`;
+                
+                if (data.version !== localVersion) {
+                    status.innerText = "Patch wird installiert...";
+                    status.style.color = "#f1c40f";
+                    bar.style.width = '80%';
+                    
+                    // 1. Service Worker hart beenden, damit alte Scripte nicht festgehalten werden
+                    if ('serviceWorker' in navigator) {
+                        let regs = await navigator.serviceWorker.getRegistrations();
+                        for (let reg of regs) { await reg.unregister(); }
+                    }
+                    
+                    // 2. Browser Cache-Speicher komplett reinigen (Für CSS, Bilder & JS)
+                    if ('caches' in window) {
+                        let cacheNames = await caches.keys();
+                        for (let name of cacheNames) { await caches.delete(name); }
+                    }
+                    
+                    // 3. Neue Version speichern und sauberen Neustart auslösen
+                    localStorage.setItem('pogo_app_version', data.version);
+                    bar.style.width = '100%';
+                    status.innerText = "Neustart...";
+                    status.style.color = "#2ecc71";
+                    
+                    setTimeout(() => {
+                        window.location.href = window.location.pathname + "?patch=" + data.version;
+                    }, 1500);
+                    
+                } else {
+                    // Spiel ist auf dem neuesten Stand!
+                    status.innerText = "Spiel ist bereit!";
+                    status.style.color = "#2ecc71";
+                    bar.style.width = '100%';
+                    
+                    setTimeout(() => {
+                        launcher.style.opacity = '0';
+                        launcher.style.pointerEvents = 'none';
+                        setTimeout(() => launcher.style.display = 'none', 500);
+                    }, 1000);
+                }
+            } catch (error) {
+                // Falls Offline oder GitHub gerade lädt
+                status.innerText = "Offline-Modus";
+                status.style.color = "#e74c3c";
+                bar.style.width = '100%';
+                setTimeout(() => {
+                    launcher.style.opacity = '0';
+                    launcher.style.pointerEvents = 'none';
+                    setTimeout(() => launcher.style.display = 'none', 500);
+                }, 1500);
+            }
+        }
+        
+        window.addEventListener('load', runGameLauncher);
+    </script>
+
     <!-- WILLOW OVERLAY -->
     <div id="camp-willow-overlay" onclick="closeCampWillow()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(13, 27, 42, 0.9); z-index: 99999; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px);">
         <div style="background: white; color: #2c3e50; padding: 15px; border-radius: 15px; font-weight: bold; font-size: 14px; line-height: 1.4; text-align: center; max-width: 280px; width: 100%; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
@@ -146,6 +232,11 @@
                 <button class="menu-btn btn-tools" onclick="showScreen('screen-cheatsheet')">📜 Spickzettel 2.0</button>
                 <button class="menu-btn btn-dex" onclick="showPokedex()">📖 Pokédex</button>
                 <button class="menu-btn btn-camp" style="background-color: #27ae60; color: white;" onclick="showScreen('screen-camp')">🏕️ Camp</button>
+                
+                <!-- NEU: EXPORT / IMPORT -->
+                <input type="file" id="import-file" style="display:none" accept=".json" onchange="importSave(event)">
+                <button class="menu-btn" style="background: linear-gradient(135deg, #34495e, #2c3e50); border-color: #3498db;" onclick="exportSave()">💾 Backup speichern</button>
+                <button class="menu-btn" style="background: linear-gradient(135deg, #34495e, #2c3e50); border-color: #e67e22;" onclick="document.getElementById('import-file').click()">📂 Backup einfügen</button>
             </div>
         </div>
 
@@ -327,7 +418,6 @@
             <div style="background: rgba(0,0,0,0.5); padding: 8px; border-bottom: 2px solid #2ecc71; display: flex; flex-direction: column; align-items: center; gap: 8px;">
                 <p style="margin: 0; font-size: 10px; color: #ccc;">Wähle 3 Pokémon für deinen Endlos-Run!</p>
                 
-                <!-- Identisches horizontales Layout wie bei den Raids! -->
                 <div style="display: flex; justify-content: center; align-items: center; gap: 15px; width: 100%;">
                     <div style="display: flex; gap: 8px;" id="rogue-team-slots">
                         <div class="raid-slot" id="rogue-slot-0">1</div>

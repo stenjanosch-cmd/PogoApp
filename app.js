@@ -322,3 +322,67 @@ function checkAnswer(userSelectedType) {
         btn.disabled = true; btn.style.cursor = "default";
     });
 }
+
+/* ============================================== */
+/* NEU: BACKUP SYSTEM (EXPORT / IMPORT)           */
+/* ============================================== */
+
+// Spielstand als JSON-Datei herunterladen
+function exportSave() {
+    let saveData = {};
+    // Alle Speicherstände einsammeln, die zu unserem Spiel gehören
+    for (let i = 0; i < localStorage.length; i++) {
+        let key = localStorage.key(i);
+        if (key && key.startsWith('pogo_')) {
+            saveData[key] = localStorage.getItem(key);
+        }
+    }
+    
+    // Datei generieren und Download auslösen
+    let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(saveData));
+    let dlAnchorElem = document.createElement('a');
+    let dateStr = new Date().toISOString().slice(0,10); // Aktuelles Datum für den Dateinamen
+    dlAnchorElem.setAttribute("href", dataStr);
+    dlAnchorElem.setAttribute("download", `pogo_trainer_backup_${dateStr}.json`);
+    document.body.appendChild(dlAnchorElem); // Muss kurz ins DOM für Firefox
+    dlAnchorElem.click();
+    document.body.removeChild(dlAnchorElem);
+    
+    alert("Dein Spielstand wurde erfolgreich als Backup heruntergeladen!");
+}
+
+// Spielstand aus einer JSON-Datei laden
+function importSave(event) {
+    let file = event.target.files[0];
+    if (!file) return;
+    
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let saveData = JSON.parse(e.target.result);
+            let importedCount = 0;
+            
+            // Speicherstände aus der Datei in den Browser laden
+            for (let key in saveData) {
+                if (key.startsWith('pogo_')) {
+                    localStorage.setItem(key, saveData[key]);
+                    importedCount++;
+                }
+            }
+            
+            if(importedCount > 0) {
+                alert("Spielstand erfolgreich wiederhergestellt! Das Spiel wird jetzt neu gestartet.");
+                location.reload(); // Zwingt das Spiel zum Neustart, um die neuen Daten zu laden
+            } else {
+                alert("Keine gültigen Pogo-Daten in dieser Datei gefunden.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Fehler beim Lesen der Datei. Ist es wirklich das Pogo-Backup?");
+        }
+    };
+    reader.readAsText(file);
+    
+    // Input zurücksetzen, falls man dieselbe Datei nochmal laden will
+    event.target.value = '';
+}
