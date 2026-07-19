@@ -128,7 +128,12 @@ function startGame(mode) {
 
 function showPokedex() {
     showScreen('screen-pokedex'); const grid = document.getElementById('pokedex-grid'); grid.innerHTML = '';
-    document.getElementById('dex-stats').innerText = `${Object.keys(pokedex).length} / 1025`;
+    
+    // Zeigt die exakte Anzahl aller gefangenen Pokémon (inklusive Megas)
+    let caughtCount = Object.keys(pokedex).length;
+    document.getElementById('dex-stats').innerText = `${caughtCount} Gefangen`;
+
+    // 1. Standard-Zählung für die normale Generationen (1 bis 1025)
     for(let i=1; i<=1025; i++) {
         let d = document.createElement('div');
         if(pokedex[i]) { 
@@ -141,6 +146,26 @@ function showPokedex() {
         else { d.className = 'dex-entry'; d.innerHTML = `<div style="font-size: 16px; color: #555;">?</div><div class="dex-id">#${i}</div><div class="dex-name" style="color: #555;">???</div>`; }
         grid.appendChild(d);
     }
+
+    // 2. NEU: Dynamische Anzeige für gefangene Mega- & Primal-Bosse (IDs > 10000)
+    Object.keys(pokedex).forEach(id => {
+        let intId = parseInt(id);
+        if (intId > 10000 && pokedex[id]) {
+            let d = document.createElement('div');
+            let shinyClass = pokedex[id].isShiny ? ' shiny' : '';
+            let displayName = pokedex[id].isShiny ? `✨ ${pokedex[id].name} ✨` : pokedex[id].name;
+            
+            // Epischer lila/goldener Look im Pokédex für Rogue-Bosse
+            d.className = 'dex-entry caught' + shinyClass;
+            d.style.borderColor = '#8e44ad'; 
+            d.style.background = 'radial-gradient(circle, rgba(142, 68, 173, 0.4), rgba(0,0,0,0.7))';
+            d.style.boxShadow = '0 0 10px rgba(142, 68, 173, 0.6)';
+            
+            d.onclick = () => window.open(`https://db.pokemongohub.net/pokemon/${pokedex[id].baseId}`, '_blank'); 
+            d.innerHTML = `<img class="dex-img" src="${pokedex[id].img}"><div class="dex-id" style="color: #9b59b6; font-weight: bold;">BOSS</div><div class="dex-name">${displayName}</div>`; 
+            grid.appendChild(d);
+        }
+    });
 }
 
 function setupButtons() {
