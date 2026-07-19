@@ -9,12 +9,12 @@ let rogueWave = 1;
 let isRogueCombatActive = false;
 let currentBiomeIndex = 0;
 
-// Arena-Hintergründe
+// Arena-Hintergründe - HIER DIE GEFIXTEN LINKS
 const rogueBiomes = [
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_arena_in_forest_clearing_202607191057.jpeg?raw=true',
-    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Mountain-top_Pokemon_arena_sea_c%E2%80%A6_202607191057.jpeg?raw=true',
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Mountain-top_Pokemon_arena_sea.jpeg?raw=true',
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Empty_Pokemon_arena_stadium_202607191057.jpeg?raw=true',
-    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_gym_arena_futuristic_aes%E2%80%A6_202607191057.jpeg?raw=true'
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_gym_arena_futuristic.jpeg?raw=true'
 ];
 
 // --- SETUP PHASE ---
@@ -138,7 +138,7 @@ async function startNextWave() {
             img: data.sprites.front_default || data.sprites.other['official-artwork'].front_default,
             maxHp: enemyMaxHp,
             hp: enemyMaxHp
-        };
+        }
         
         updateRogueUI();
         logMsg(`Wilde Begegnung mit <span class="dmg">${eName}</span>!`);

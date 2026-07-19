@@ -136,14 +136,15 @@ p.subtitle { color: #ecf0f1; margin-bottom: 10px; font-size: 12px; font-weight: 
 .dex-entry.selected-for-raid { border-color: #8e44ad; background: rgba(142, 68, 173, 0.3); opacity: 0.5; pointer-events: none; }
 
 /* ============================================== */
-/* NEU: ROGUE BATTLE UI (OPTIMIERTER KAMERA-ZOOM) */
+/* NEU: ROGUE BATTLE UI (ZENTRIERTE KAMERA)       */
 /* ============================================== */
 
 .rogue-arena {
     width: 100%;
-    height: 240px; 
-    background-size: 150%; 
-    background-position: center 85%; 
+    height: 45vh; 
+    min-height: 280px; 
+    background-size: cover; /* Bild füllt den Raum perfekt aus */
+    background-position: center 75%; /* Plattform mittig, leichter Fokus nach unten */
     background-repeat: no-repeat;
     border: 2px solid #2ecc71;
     border-radius: 15px;
@@ -156,16 +157,16 @@ p.subtitle { color: #ecf0f1; margin-bottom: 10px; font-size: 12px; font-weight: 
 
 @media (max-width: 450px) {
     .rogue-arena {
-        background-size: 180%; 
-        background-position: center 95%; 
+        background-size: 200%; /* Etwas ranzoomen für Handys */
+        background-position: center 85%; /* Zieht die Plattform genau in den sichtbaren Bereich */
     }
 }
 
-/* Responsive Sprites */
+/* Responsive Sprites - Jetzt mehr in der Mitte auf der Plattform */
 .rogue-sprite-enemy {
     position: absolute;
-    top: 15%;
-    right: 10%;
+    top: 25%; /* Tiefer im Bild, damit es auf der Plattform steht */
+    right: 15%; /* Mehr in die Mitte gerückt */
     width: clamp(60px, 30%, 100px); 
     height: auto;
     object-fit: contain;
@@ -175,8 +176,8 @@ p.subtitle { color: #ecf0f1; margin-bottom: 10px; font-size: 12px; font-weight: 
 
 .rogue-sprite-player {
     position: absolute;
-    bottom: 5%;
-    left: 10%;
+    bottom: 15%; /* Angehoben, damit es auf dem Arenaboden steht */
+    left: 15%; /* Mehr in die Mitte gerückt */
     width: clamp(70px, 35%, 120px);
     height: auto;
     object-fit: contain;
