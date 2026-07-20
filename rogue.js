@@ -21,6 +21,9 @@ let starShardWaves = 0;
 let adrenalineActive = false;
 let focusSashActive = false;
 
+// Speichert die Nachricht für das Loot-Item über den Wellen-Wechsel hinweg
+let rogueLootMessage = ""; 
+
 // --- Speed-Modus Variablen ---
 let rogueSpeedMultiplier = 1.0; 
 let isSpeedModeActive = false;
@@ -31,21 +34,48 @@ let currentLootBuff = 5;
 let currentLootHp = 8;
 let currentLootTeam = 3; 
 
-// Normale Arena-Hintergründe
+// Normale Arena-Hintergründe (Erweitert!)
 const rogueBiomes = [
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_arena_in_forest_clearing_202607191057.jpeg?raw=true',
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Mountain-top_Pokemon_arena_sea.jpeg?raw=true',
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Empty_Pokemon_arena_stadium_202607191057.jpeg?raw=true',
-    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_gym_arena_futuristic.jpeg?raw=true'
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_gym_arena_futuristic.jpeg?raw=true',
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Alpine_Pokemon_arena_snowy_mount%E2%80%A6_202607201843.jpeg?raw=true',
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Desert_oasis_Pokemon_arena_202607201843.jpeg?raw=true',
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Futuristic_Pokemon_arena_high-te%E2%80%A6_202607201843.jpeg?raw=true',
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_arena_in_marble_coliseum_202607201843.jpeg?raw=true',
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_arena_in_wheat_field_202607201843.jpeg?raw=true',
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_arena_on_floating_aircra%E2%80%A6_202607201843.jpeg?raw=true',
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_arena_subterranean_cryst%E2%80%A6_202607201843.jpeg?raw=true',
+    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Urban_rooftop_Pokemon_arena_night_202607201843.jpeg?raw=true'
 ];
 
-// Epische Boss-Hintergründe
-const bossBiomes = [
-    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Sky-temple_boss_battle_arena_202607192129.jpeg?raw=true',
-    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Underwater_boss_battle_stadium_202607192129.jpeg?raw=true',
-    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Stone_arena_volcanic_crater_202607192128.jpeg?raw=true',
-    'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Floating_crystalline_boss_arena_202607192128.jpeg?raw=true'
-];
+// Typenspezifische Boss-Hintergründe
+const bossTypeBiomes = {
+    "fire": [
+        'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Fire_boss_battle_arena_iron_202607201822.jpeg?raw=true',
+        'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Fire_boss_battle_arena_valley_202607201822.jpeg?raw=true'
+    ],
+    "grass": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/Grass-type_boss_battle_arena_202607201822.jpeg?raw=true'],
+    "psychic": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/Psychic_boss_battle_arena_Zen_202607201822.jpeg?raw=true'],
+    "dragon": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/drache.jpeg?raw=true'],
+    "ice": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/eis.jpeg?raw=true'],
+    "electric": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/elektro.jpeg?raw=true'],
+    "flying": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/flug.jpeg?raw=true'],
+    "ghost": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/geist.jpeg?raw=true'],
+    "fighting": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/kampf.jpeg?raw=true'],
+    "bug": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/k%C3%A4fer.jpeg?raw=true'],
+    "normal": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/normal.jpeg?raw=true'],
+    "poison": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/poison.jpeg?raw=true'],
+    "steel": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/stahl.jpeg?raw=true'],
+    "dark": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/unlicht.jpeg?raw=true'],
+    
+    // Fallbacks für noch fehlende Typen (Alte Arenen)
+    "water": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/Underwater_boss_battle_stadium_202607192129.jpeg?raw=true'],
+    "ground": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/Stone_arena_volcanic_crater_202607192128.jpeg?raw=true'],
+    "rock": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/Stone_arena_volcanic_crater_202607192128.jpeg?raw=true'],
+    "fairy": ['https://github.com/stenjanosch-cmd/PogoApp/blob/main/Floating_crystalline_boss_arena_202607192128.jpeg?raw=true']
+};
 
 // Standard Legendäre Liste (Für reguläre Wellen ab Welle 10+)
 const ROGUE_LEGENDARY_IDS = [
@@ -60,7 +90,7 @@ const ROGUE_LEGENDARY_IDS = [
     1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1014, 1015, 1016, 1017, 1024 // Gen 9
 ];
 
-// DIE EXKLUSIVE LISTE DER EPISCHEN BOSSE (Gesichert über Namen, um API-ID-Fehler zu verhindern)
+// DIE EXKLUSIVE LISTE DER EPISCHEN BOSSE
 const ROGUE_EXPLICIT_BOSS_NAMES = [
     "venusaur-mega", "charizard-mega-x", "charizard-mega-y", "blastoise-mega",
     "beedrill-mega", "pidgeot-mega", "alakazam-mega", "slowbro-mega", "gengar-mega",
@@ -186,7 +216,6 @@ function renderRogueSetupDex() {
         let pkm = dex[id];
         if(!pkm) continue;
         
-        // Filter-Logik
         if (rogueSearchTerm && !pkm.name.toLowerCase().includes(rogueSearchTerm)) continue;
         if (rogueFilterType && !pkm.types.includes(rogueFilterType)) continue;
         
@@ -234,7 +263,9 @@ async function startRogueRun() {
             id: id,
             name: base.name,
             baseId: base.baseId,
-            types: base.types,
+            // WICHTIGER FIX: Erstellt eine saubere Kopie des Typen-Arrays, 
+            // damit TM-Änderungen niemals im globalen Pokedex gespeichert werden!
+            types: [...base.types], 
             isShiny: base.isShiny || false,
             maxHp: stats.maxHp, 
             hp: stats.maxHp,
@@ -262,6 +293,8 @@ async function startRogueRun() {
     currentLootBuff = 5;
     currentLootHp = 8;
     currentLootTeam = 3; 
+    
+    rogueLootMessage = ""; 
 
     currentBiomeIndex = Math.floor(Math.random() * rogueBiomes.length);
     document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
@@ -462,47 +495,44 @@ function triggerBossWarning() {
 // --- KAMPF / WELLE ---
 async function startNextWave() {
     isRogueCombatActive = false;
+    
+    // Leert das Log der letzten Welle
     document.getElementById('rogue-log').innerHTML = "";
+    
+    // Gibt Nachricht vom Loot-Shop (z.B. Heilung) sicher aus
+    if (rogueLootMessage !== "") {
+        logMsg(rogueLootMessage, "heal");
+        rogueLootMessage = ""; 
+    }
+
     document.getElementById('rogue-wave-display').innerText = "Welle " + rogueWave;
     document.getElementById('rogue-enemy-sprite').className = "rogue-sprite-enemy"; 
     
     logMsg(`Suche nach wildem Gegner...`);
     let randomId;
-    let isBossWave = (rogueWave > 0 && rogueWave % 5 === 0);
+    let isBossWave = (rogueWave > 0 && rogueWave % 10 === 0);
     
     if (isBossWave) {
-        // EXKLUSIVE BOSS LOGIK (Nur definierte Namen)
+        // EXKLUSIVE BOSS LOGIK
         randomId = ROGUE_EXPLICIT_BOSS_NAMES[Math.floor(Math.random() * ROGUE_EXPLICIT_BOSS_NAMES.length)];
-        logMsg(`🚨 BOSS-WELLE! Ein epischer Gegner taucht auf! 🚨`, "dmg");
-        
-        let bossBg = bossBiomes[Math.floor(Math.random() * bossBiomes.length)];
-        document.getElementById('rogue-arena').style.backgroundImage = `url('${bossBg}')`;
-        document.getElementById('rogue-enemy-sprite').classList.add('boss-aura');
-        triggerBossWarning();
     } else {
         // NORMALE WELLEN LOGIK
         while(true) {
-            randomId = Math.floor(Math.random() * 1025) + 1; // 1025 verhindert zufällige Fusions/Mega IDs (welche bei 10000+ liegen)
+            randomId = Math.floor(Math.random() * 1025) + 1; 
             
-            // Legendäre Skalierung für normale Wellen
             if (ROGUE_LEGENDARY_IDS.includes(randomId)) {
                 if (rogueWave < 10) {
-                    continue; // Vor Welle 10 absolut verboten
+                    continue; 
                 } else {
-                    let chance = Math.min((rogueWave / 100), 0.5); // Welle 10 = 10%, Welle 20 = 20% (Max 50%)
+                    let chance = Math.min((rogueWave / 100), 0.5); 
                     if (Math.random() < chance) {
-                        break; // Akzeptiert
+                        break; 
                     } else {
-                        continue; // Erneut würfeln
+                        continue; 
                     }
                 }
             }
-            break; // Normales Pokémon -> Akzeptiert!
-        }
-        
-        if ((rogueWave - 1) % 10 === 0 && rogueWave > 1) {
-            currentBiomeIndex = (currentBiomeIndex + 1) % rogueBiomes.length;
-            document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
+            break; 
         }
     }
     
@@ -510,17 +540,42 @@ async function startNextWave() {
         const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
         const data = await res.json();
         
+        // --- NEUE HINTERGRUND-LOGIK ---
+        if (isBossWave) {
+            logMsg(`🚨 BOSS-WELLE! Ein epischer Gegner taucht auf! 🚨`, "dmg");
+            
+            let primaryType = data.types[0].type.name; 
+            
+            let bossBg = 'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Floating_crystalline_boss_arena_202607192128.jpeg?raw=true';
+            if (bossTypeBiomes[primaryType]) {
+                let list = bossTypeBiomes[primaryType];
+                bossBg = list[Math.floor(Math.random() * list.length)];
+            }
+            
+            document.getElementById('rogue-arena').style.backgroundImage = `url('${bossBg}')`;
+            document.getElementById('rogue-enemy-sprite').classList.add('boss-aura');
+            triggerBossWarning();
+        } else {
+            // HINTERGRUND-ROTATION FÜR NORMALE WELLEN
+            if (rogueWave > 1 && rogueWave % 5 === 0) {
+                currentBiomeIndex = (currentBiomeIndex + 1) % rogueBiomes.length;
+                document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
+            } else if ((rogueWave - 1) % 10 === 0 && rogueWave > 1) {
+                // Setzt nach dem Boss wieder auf ein normales Biome zurück
+                currentBiomeIndex = (currentBiomeIndex + 1) % rogueBiomes.length;
+                document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
+            }
+        }
+        
         let eName = data.name.toUpperCase();
         let originalName = data.name.toLowerCase();
         
-        // Versuche den deutschen Basisnamen zu laden
         try { 
             const sRes = await fetch(data.species.url); 
             const deNameObj = (await sRes.json()).names.find(n => n.language.name === 'de'); 
             if (deNameObj) eName = deNameObj.name.toUpperCase(); 
         } catch(e) {}
         
-        // Namens-Aufbereitung nach deinen exakten Vorgaben
         if (originalName.includes('-mega')) {
             eName = "MEGA-" + eName;
             if (originalName.includes('-x')) eName += " X";
@@ -580,6 +635,7 @@ async function startNextWave() {
         checkRogueAutoTurn();
         
     } catch(e) {
+        // Falls PokeAPI hängt, direkt neuen Versuch starten
         setTimeout(startNextWave, 1000); 
     }
 }
@@ -989,7 +1045,7 @@ function winWave(wasCaught = false) {
     
     const consumables = [
         { id: 'heal', name: 'Trank', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/potion.png', desc: 'Heilt dein aktives Pokémon um 50%.' },
-        { id: 'toprevive', name: 'Top-Beleber', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/max-revive.png', desc: 'Belebt ein besiegtes Team-Mitglied mit 100% HP.' },
+        { id: 'toprevive', name: 'Top-Beleber', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/max-revive.png', desc: 'Belebt alle besiegten Team-Mitglieder mit 100% HP.' },
         { id: 'adrenaline', name: 'Adrenalin-Orb', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/adrenaline-orb.png', desc: 'Dein erster Angriff macht nächste Runde 50% mehr Schaden.' },
         { id: 'focus', name: 'Fokusgurt', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/focus-sash.png', desc: 'Blockt den ersten gegnerischen Angriff der nächsten Welle ab.' },
         { id: 'tm', name: 'TM (Lade-Attacke)', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-normal.png', desc: 'Ändert den Lade-Attacken-Typ deines aktiven Pokémon zufällig.' },
@@ -1037,22 +1093,35 @@ function confirmRogueLoot(lootId, lootName) {
 
 function applyRogueLoot(lootId) {
     const player = rogueTeam[rogueActiveIndex];
+    rogueLootMessage = ""; // Reset der Nachricht
     
     if(lootId === 'heal') {
         player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.5));
+        rogueLootMessage = `${player.name} wurde um 50% geheilt!`;
     } 
     else if(lootId === 'toprevive') {
-        let deadPkm = rogueTeam.find(p => p.hp <= 0);
-        if(deadPkm) deadPkm.hp = deadPkm.maxHp;
+        let revived = false;
+        rogueTeam.forEach(p => {
+            if(p.hp <= 0) { p.hp = p.maxHp; revived = true; }
+        });
+        if(revived) {
+            rogueLootMessage = "Top-Beleber eingesetzt! Besiegte Team-Mitglieder sind wieder fit!";
+        } else {
+            player.hp = player.maxHp;
+            rogueLootMessage = "Niemand war besiegt. Top-Beleber hat stattdessen " + player.name + " komplett geheilt!";
+        }
     } 
     else if(lootId === 'adrenaline') {
         adrenalineActive = true;
+        rogueLootMessage = "Adrenalin-Orb aktiv! Dein nächster Angriff wird massiv!";
     } 
     else if(lootId === 'focus') {
         focusSashActive = true;
+        rogueLootMessage = "Fokusgurt aktiv! Der nächste Treffer wird komplett geblockt.";
     }
     else if(lootId === 'starshard') {
         starShardWaves += 3;
+        rogueLootMessage = "Sternenstück aktiv! +50% Sternenstaub für die nächsten 3 Wellen!";
     }
     else if(lootId === 'tm') {
         const allTypes = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
@@ -1062,20 +1131,21 @@ function applyRogueLoot(lootId) {
         } else {
             player.types.push(randomType);
         }
+        rogueLootMessage = `TM eingesetzt! ${player.name} hat einen neuen Lade-Attacken-Typ erhalten!`;
     }
     else if(lootId === 'protein') {
         player.atk = Math.floor(player.atk * (1 + (currentLootBuff / 100)));
-        logMsg(`${player.name} fühlt sich viel stärker!`, "heal");
+        rogueLootMessage = `${player.name} fühlt sich viel stärker! (Angriff +${currentLootBuff}%)`;
     }
     else if(lootId === 'eisen') {
         player.def = Math.floor(player.def * (1 + (currentLootBuff / 100)));
-        logMsg(`${player.name}s Abwehr ist gestiegen!`, "heal");
+        rogueLootMessage = `${player.name}s Abwehr ist gestiegen! (Verteidigung +${currentLootBuff}%)`;
     }
     else if(lootId === 'kpplus') {
         let hpBoost = Math.floor(player.maxHp * (currentLootHp / 100));
         player.maxHp += hpBoost;
         player.hp += hpBoost; 
-        logMsg(`${player.name} hat jetzt mehr KP!`, "heal");
+        rogueLootMessage = `${player.name} hat jetzt mehr KP! (+${currentLootHp}%)`;
     }
     else if(lootId === 'sonderbonbon') {
         rogueTeam.forEach(p => {
@@ -1085,21 +1155,21 @@ function applyRogueLoot(lootId) {
             p.maxHp += hpBoost;
             p.hp += hpBoost;
         });
-        logMsg(`Das ganze Team hat ein Level-Up!`, "heal");
+        rogueLootMessage = `TEAM LEVEL UP! Alle Stats vom gesamten Team stiegen um +${currentLootTeam}%!`;
     }
     else if(lootId === 'machtreif') {
         player.atk = Math.floor(player.atk * (1 + ((currentLootBuff * 0.6) / 100)));
-        logMsg(`${player.name}s Angriff stieg leicht!`, "heal");
+        rogueLootMessage = `${player.name}s Angriff stieg leicht!`;
     }
     else if(lootId === 'machtgurt') {
         player.def = Math.floor(player.def * (1 + ((currentLootBuff * 0.6) / 100)));
-        logMsg(`${player.name}s Abwehr stieg leicht!`, "heal");
+        rogueLootMessage = `${player.name}s Abwehr stieg leicht!`;
     }
     else if(lootId === 'machtgewicht') {
         let hpBoost = Math.floor(player.maxHp * ((currentLootHp * 0.6) / 100));
         player.maxHp += hpBoost;
         player.hp += hpBoost;
-        logMsg(`${player.name} hat minimal mehr KP!`, "heal");
+        rogueLootMessage = `${player.name} hat minimal mehr KP!`;
     }
     else if(lootId === 'epteiler') {
         rogueTeam.forEach(p => {
@@ -1109,7 +1179,7 @@ function applyRogueLoot(lootId) {
             p.maxHp += hpBoost;
             p.hp += hpBoost;
         });
-        logMsg(`Das Team wurde leicht gestärkt!`, "heal");
+        rogueLootMessage = `EP-Teiler aktiviert! Das Team wurde leicht gestärkt!`;
     }
     
     showScreen('screen-rogue-battle');
