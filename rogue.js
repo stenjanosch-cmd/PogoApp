@@ -47,44 +47,35 @@ const bossBiomes = [
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Floating_crystalline_boss_arena_202607192128.jpeg?raw=true'
 ];
 
-// Legendären-Liste (inkl. Ultrabestien, Tapus etc.)
+// Standard Legendäre Liste (Für reguläre Wellen ab Welle 10+)
 const ROGUE_LEGENDARY_IDS = [
     144, 145, 146, 150, 151, // Gen 1 
     243, 244, 245, 249, 250, 251, // Gen 2 
     377, 378, 379, 380, 381, 382, 383, 384, 385, 386, // Gen 3 
-    480, 481, 482, 483, 484, 485, 486, 487, 488, 491, // Gen 4 
-    638, 639, 640, 641, 642, 643, 644, 645, 646, // Gen 5 
-    716, 717, 718, // Gen 6 
-    785, 786, 787, 788, // Kapu-Wächter
-    791, 792, 793, 794, 795, 796, 797, 798, 799, 800, // Solgaleo, Lunala, Ultrabestien, Necrozma
-    888, 889 // Zacian, Zamazenta
+    480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, // Gen 4 
+    638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649, // Gen 5 
+    716, 717, 718, 719, 720, 721, // Gen 6 
+    785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 801, 802, 807, // Gen 7 
+    888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, // Gen 8
+    1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1014, 1015, 1016, 1017, 1024 // Gen 9
 ];
 
-// Mega-Liste
-const ROGUE_MEGA_BOSS_IDS = [
-    10033, 10034, // Mega Glurak X/Y
-    10036, 10037, // Mega Turtok, Bisaflor
-    10044, 10045, // Mega Simsala, Ampharos
-    10048, 10051, // Mega Gengar, Garados
-    10054, 10055, // Mega Aerodactyl, Scherox
-    10056, 10057, // Mega Skaraborn, Hundemon
-    10060,        // Mega Despotar
-    10065, 10066, 10067, // Mega Gewaldro, Lohgock, Sumpex
-    10068, 10070, // Mega Guardevoir, Stolloss
-    10071, 10072, // Mega Meditalis, Voltenso
-    10073, 10074, // Mega Banette, Absol
-    10075, 10076, // Mega Latias, Latios
-    10077, 10078, // Proto Groudon, Proto Kyogre
-    10079,        // Mega Rayquaza
-    10084, 10085, // Mega Knakrack, Lucario
-    10086,        // Mega Rexblisar
-    10087, 10088, // Mega Mewtu X/Y
-    10089,        // Mega Brutalanda
-    10090, 10091, 10092, // Mega Bibor, Tauboss, Lahmus
-    10095, 10098, // Mega Stahlos, Zobiris
-    10099, 10100, // Mega Tohaido, Camerupt
-    10101, 10102, // Mega Altaria, Firnontor
-    10142         // Ultra Necrozma
+// DIE EXKLUSIVE LISTE DER EPISCHEN BOSSE (Gesichert über Namen, um API-ID-Fehler zu verhindern)
+const ROGUE_EXPLICIT_BOSS_NAMES = [
+    "venusaur-mega", "charizard-mega-x", "charizard-mega-y", "blastoise-mega",
+    "beedrill-mega", "pidgeot-mega", "alakazam-mega", "slowbro-mega", "gengar-mega",
+    "kangaskhan-mega", "pinsir-mega", "gyarados-mega", "aerodactyl-mega",
+    "ampharos-mega", "scizor-mega", "heracross-mega", "houndoom-mega",
+    "sceptile-mega", "blaziken-mega", "swampert-mega", "gardevoir-mega",
+    "sableye-mega", "mawile-mega", "aggron-mega", "medicham-mega",
+    "manectric-mega", "sharpedo-mega", "camerupt-mega", "altaria-mega",
+    "banette-mega", "absol-mega", "salamence-mega", "metagross-mega",
+    "latias-mega", "latios-mega", "rayquaza-mega", "lopunny-mega",
+    "garchomp-mega", "lucario-mega", "abomasnow-mega", "audino-mega",
+    "diancie-mega", "kyogre-primal", "groudon-primal", "necrozma-dusk",
+    "necrozma-dawn", "kyurem-black", "kyurem-white", "dialga-origin",
+    "palkia-origin", "giratina-origin", "tornadus-therian", "thundurus-therian",
+    "landorus-therian", "enamorus-therian", "zacian-crowned", "zamazenta-crowned"
 ];
 
 // --- HILFSFUNKTION FÜR ECHTE STATS ---
@@ -98,11 +89,11 @@ async function fetchRogueStats(id, isPlayer, waveLevel) {
         let baseDef = data.stats.find(s => s.stat.name === 'defense').base_stat;
         
         let isLegendary = ROGUE_LEGENDARY_IDS.includes(data.id);
-        let isMegaBoss = ROGUE_MEGA_BOSS_IDS.includes(data.id);
+        let isExplicitBoss = ROGUE_EXPLICIT_BOSS_NAMES.includes(data.name);
         
         let legendBuff = 1.0;
         if(isLegendary) legendBuff = 1.5;
-        if(isMegaBoss) legendBuff = 2.0;
+        if(isExplicitBoss) legendBuff = 2.0;
         
         let level = isPlayer ? 40 : (15 + (waveLevel * 3));
         
@@ -110,7 +101,7 @@ async function fetchRogueStats(id, isPlayer, waveLevel) {
         let atk = Math.floor(0.01 * (2 * baseAtk * legendBuff) * level) + 5;
         let def = Math.floor(0.01 * (2 * baseDef * legendBuff) * level) + 5;
         
-        return { maxHp: maxHp * 3, atk: atk, def: def, isLegendary: isLegendary || isMegaBoss };
+        return { maxHp: maxHp * 3, atk: atk, def: def, isLegendary: isLegendary || isExplicitBoss };
     } catch (e) {
         return { maxHp: 100, atk: 50, def: 50, isLegendary: false };
     }
@@ -462,7 +453,7 @@ function logMsg(msg, cssClass = "") {
 
 function triggerBossWarning() {
     let warn = document.createElement('div');
-    warn.innerHTML = "⚠️ MEGA BOSS WELLE ⚠️";
+    warn.innerHTML = "⚠️ EPIC BOSS WELLE ⚠️";
     warn.className = "boss-warning-overlay";
     document.getElementById('screen-rogue-battle').appendChild(warn);
     setTimeout(() => warn.remove(), 3500); 
@@ -477,24 +468,38 @@ async function startNextWave() {
     
     logMsg(`Suche nach wildem Gegner...`);
     let randomId;
+    let isBossWave = (rogueWave > 0 && rogueWave % 5 === 0);
     
-    if (rogueWave > 0 && rogueWave % 10 === 0) {
-        randomId = ROGUE_MEGA_BOSS_IDS[Math.floor(Math.random() * ROGUE_MEGA_BOSS_IDS.length)];
-        logMsg(`🚨 SUPER-BOSS WELLE! Ein mächtiges Mega-Pokémon taucht auf! 🚨`, "dmg");
+    if (isBossWave) {
+        // EXKLUSIVE BOSS LOGIK (Nur definierte Namen)
+        randomId = ROGUE_EXPLICIT_BOSS_NAMES[Math.floor(Math.random() * ROGUE_EXPLICIT_BOSS_NAMES.length)];
+        logMsg(`🚨 BOSS-WELLE! Ein epischer Gegner taucht auf! 🚨`, "dmg");
         
         let bossBg = bossBiomes[Math.floor(Math.random() * bossBiomes.length)];
         document.getElementById('rogue-arena').style.backgroundImage = `url('${bossBg}')`;
         document.getElementById('rogue-enemy-sprite').classList.add('boss-aura');
         triggerBossWarning();
-        
-    } else if (rogueWave > 0 && rogueWave % 5 === 0) {
-        randomId = ROGUE_LEGENDARY_IDS[Math.floor(Math.random() * ROGUE_LEGENDARY_IDS.length)];
-        logMsg(`⚠️ BOSS-WELLE! Ein seltenes Legendäres taucht auf! ⚠️`, "eff");
-        
-        currentBiomeIndex = (currentBiomeIndex + 1) % rogueBiomes.length;
-        document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
     } else {
-        randomId = Math.floor(Math.random() * 1025) + 1;
+        // NORMALE WELLEN LOGIK
+        while(true) {
+            randomId = Math.floor(Math.random() * 1025) + 1; // 1025 verhindert zufällige Fusions/Mega IDs (welche bei 10000+ liegen)
+            
+            // Legendäre Skalierung für normale Wellen
+            if (ROGUE_LEGENDARY_IDS.includes(randomId)) {
+                if (rogueWave < 10) {
+                    continue; // Vor Welle 10 absolut verboten
+                } else {
+                    let chance = Math.min((rogueWave / 100), 0.5); // Welle 10 = 10%, Welle 20 = 20% (Max 50%)
+                    if (Math.random() < chance) {
+                        break; // Akzeptiert
+                    } else {
+                        continue; // Erneut würfeln
+                    }
+                }
+            }
+            break; // Normales Pokémon -> Akzeptiert!
+        }
+        
         if ((rogueWave - 1) % 10 === 0 && rogueWave > 1) {
             currentBiomeIndex = (currentBiomeIndex + 1) % rogueBiomes.length;
             document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
@@ -506,10 +511,30 @@ async function startNextWave() {
         const data = await res.json();
         
         let eName = data.name.toUpperCase();
-        try { const sRes = await fetch(data.species.url); const deNameObj = (await sRes.json()).names.find(n => n.language.name === 'de'); if (deNameObj) eName = deNameObj.name; } catch(e) {}
+        let originalName = data.name.toLowerCase();
         
-        if (eName.includes('-MEGA')) eName = "MEGA " + eName.replace('-MEGA', '').replace('-X', ' X').replace('-Y', ' Y');
-        if (eName.includes('-PRIMAL')) eName = "PROTO " + eName.replace('-PRIMAL', '');
+        // Versuche den deutschen Basisnamen zu laden
+        try { 
+            const sRes = await fetch(data.species.url); 
+            const deNameObj = (await sRes.json()).names.find(n => n.language.name === 'de'); 
+            if (deNameObj) eName = deNameObj.name.toUpperCase(); 
+        } catch(e) {}
+        
+        // Namens-Aufbereitung nach deinen exakten Vorgaben
+        if (originalName.includes('-mega')) {
+            eName = "MEGA-" + eName;
+            if (originalName.includes('-x')) eName += " X";
+            if (originalName.includes('-y')) eName += " Y";
+        }
+        if (originalName.includes('-primal')) eName = "PROTO-" + eName;
+        if (originalName.includes('-origin')) eName += " (URFORM)";
+        if (originalName.includes('-therian')) eName += " (TIERGEISTFORM)";
+        if (originalName.includes('zacian-crowned')) eName = "ZACIAN (KÖNIG DES SCHWERTES)";
+        if (originalName.includes('zamazenta-crowned')) eName = "ZAMAZENTA (KÖNIG DES SCHILDES)";
+        if (originalName.includes('necrozma-dusk')) eName = "NECROZMA (ABENDMÄHNE)";
+        if (originalName.includes('necrozma-dawn')) eName = "NECROZMA (MORGENSCHWINGEN)";
+        if (originalName.includes('kyurem-black')) eName = "SCHWARZES KYUREM";
+        if (originalName.includes('kyurem-white')) eName = "WEISSES KYUREM";
         
         let stats = await fetchRogueStats(data.id, false, rogueWave);
         
@@ -962,7 +987,6 @@ function winWave(wasCaught = false) {
     const container = document.getElementById('rogue-loot-container');
     container.innerHTML = `<div style="font-family: 'Righteous'; color: #2ecc71; font-size: 18px; text-shadow: 1px 1px 2px black; margin-bottom: 20px;">Beute: +${waveDust} ✨</div>`;
     
-    // OFFIZIELLE POKEMON ITEMS STATT EMOJIS
     const consumables = [
         { id: 'heal', name: 'Trank', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/potion.png', desc: 'Heilt dein aktives Pokémon um 50%.' },
         { id: 'toprevive', name: 'Top-Beleber', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/max-revive.png', desc: 'Belebt ein besiegtes Team-Mitglied mit 100% HP.' },
@@ -984,14 +1008,12 @@ function winWave(wasCaught = false) {
         { id: 'epteiler', name: 'EP-Teiler', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/exp-share.png', desc: `Das gesamte Team erhält dauerhaft +${Math.floor(currentLootTeam * 0.5)}% auf alle Werte.` }
     ];
     
-    // ZURÜCK AUF 1 Consumable + 2 Buffs = 3 Auswahlmöglichkeiten
     let selectedConsumables = consumables.sort(() => 0.5 - Math.random()).slice(0, 1);
     let selectedBuffs = buffs.sort(() => 0.5 - Math.random()).slice(0, 2); 
     
     let finalLoot = [...selectedConsumables, ...selectedBuffs].sort(() => 0.5 - Math.random());
     
     finalLoot.forEach(item => {
-        // NEUES HTML FÜR DIE LOOT CARDS (Keine Emojis mehr)
         container.innerHTML += `
             <div class="loot-card" onclick="confirmRogueLoot('${item.id}', '${item.name}')">
                 <img class="loot-icon" src="${item.icon}" alt="${item.name}">
