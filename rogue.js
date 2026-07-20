@@ -2,20 +2,34 @@
 /* DATEI START: rogue.js (Endlos-Kampfmodus)      */
 /* ============================================== */
 
-let rogueTeam = []; // 3 Pokemon mit { id, name, types, maxHp, hp, ep, baseId, isShiny, atk, def }
+let rogueTeam = []; 
 let rogueActiveIndex = 0;
-let rogueEnemy = null; // { name, baseId, types, maxHp, hp, img, atk, def, isLegendary }
+let rogueEnemy = null; 
 let rogueWave = 1;
 let isRogueCombatActive = false;
 let currentBiomeIndex = 0;
 
-// Neue Rogue State Variablen
+// Such- & Filter-Variablen für das Setup
+let rogueSearchTerm = "";
+let rogueFilterType = "";
+
+// Rogue State Variablen
 let rogueRunStardust = 0;
 let isAutoModeActive = false;
 let autoModeUsedThisWave = false;
 let starShardWaves = 0;
 let adrenalineActive = false;
 let focusSashActive = false;
+
+// --- NEU: Speed-Modus Variablen ---
+let rogueSpeedMultiplier = 1.0; 
+let isSpeedModeActive = false;
+const SPEED_UNLOCK_LEVEL = 10; // Ab diesem Spielerlevel wird der Button sichtbar
+
+// Loot Skalierungs-Variablen
+let currentLootBuff = 15;
+let currentLootHp = 20;
+let currentLootTeam = 15; 
 
 // Normale Arena-Hintergründe
 const rogueBiomes = [
@@ -25,7 +39,7 @@ const rogueBiomes = [
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Pokemon_gym_arena_futuristic.jpeg?raw=true'
 ];
 
-// NEU: Epische Boss-Hintergründe
+// Epische Boss-Hintergründe
 const bossBiomes = [
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Sky-temple_boss_battle_arena_202607192129.jpeg?raw=true',
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Underwater_boss_battle_stadium_202607192129.jpeg?raw=true',
@@ -33,21 +47,44 @@ const bossBiomes = [
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Floating_crystalline_boss_arena_202607192128.jpeg?raw=true'
 ];
 
-const ROGUE_LEGENDARY_IDS = [144,145,146,150,151,243,244,245,249,250,251,377,378,379,380,381,382,383,384,385,386,483,484,487];
+// Massiv erweiterte Legendären-Liste (inkl. Ultrabestien, Tapus etc.)
+const ROGUE_LEGENDARY_IDS = [
+    144, 145, 146, 150, 151, // Gen 1 
+    243, 244, 245, 249, 250, 251, // Gen 2 
+    377, 378, 379, 380, 381, 382, 383, 384, 385, 386, // Gen 3 
+    480, 481, 482, 483, 484, 485, 486, 487, 488, 491, // Gen 4 
+    638, 639, 640, 641, 642, 643, 644, 645, 646, // Gen 5 
+    716, 717, 718, // Gen 6 
+    785, 786, 787, 788, // Kapu-Wächter
+    791, 792, 793, 794, 795, 796, 797, 798, 799, 800, // Solgaleo, Lunala, Ultrabestien, Necrozma
+    888, 889 // Zacian, Zamazenta
+];
 
-// NEU: Mega / Primal / Super Boss IDs aus der PokeAPI
+// Massiv erweiterte Mega-Liste (Alle validen PokeAPI Mega IDs)
 const ROGUE_MEGA_BOSS_IDS = [
-    10033, // Mega Charizard X
-    10034, // Mega Charizard Y
-    10077, // Primal Groudon
-    10078, // Primal Kyogre
-    10079, // Mega Rayquaza
-    10087, // Mega Mewtwo X
-    10088, // Mega Mewtwo Y
-    10061, // Mega Salamence
-    10063, // Mega Metagross
-    10048, // Mega Gengar
-    10142  // Ultra Necrozma
+    10033, 10034, // Mega Glurak X/Y
+    10036, 10037, // Mega Turtok, Bisaflor
+    10044, 10045, // Mega Simsala, Ampharos
+    10048, 10051, // Mega Gengar, Garados
+    10054, 10055, // Mega Aerodactyl, Scherox
+    10056, 10057, // Mega Skaraborn, Hundemon
+    10060,        // Mega Despotar
+    10065, 10066, 10067, // Mega Gewaldro, Lohgock, Sumpex
+    10068, 10070, // Mega Guardevoir, Stolloss
+    10071, 10072, // Mega Meditalis, Voltenso
+    10073, 10074, // Mega Banette, Absol
+    10075, 10076, // Mega Latias, Latios
+    10077, 10078, // Proto Groudon, Proto Kyogre
+    10079,        // Mega Rayquaza
+    10084, 10085, // Mega Knakrack, Lucario
+    10086,        // Mega Rexblisar
+    10087, 10088, // Mega Mewtu X/Y
+    10089,        // Mega Brutalanda
+    10090, 10091, 10092, // Mega Bibor, Tauboss, Lahmus
+    10095, 10098, // Mega Stahlos, Zobiris
+    10099, 10100, // Mega Tohaido, Camerupt
+    10101, 10102, // Mega Altaria, Firnontor
+    10142         // Ultra Necrozma
 ];
 
 // --- HILFSFUNKTION FÜR ECHTE STATS ---
@@ -63,12 +100,11 @@ async function fetchRogueStats(id, isPlayer, waveLevel) {
         let isLegendary = ROGUE_LEGENDARY_IDS.includes(data.id);
         let isMegaBoss = ROGUE_MEGA_BOSS_IDS.includes(data.id);
         
-        // Normale Legendäre 1.5x, Megas/Primals 2.0x Stats!
         let legendBuff = 1.0;
         if(isLegendary) legendBuff = 1.5;
         if(isMegaBoss) legendBuff = 2.0;
         
-        let level = isPlayer ? 40 : Math.min(100, 15 + (waveLevel * 3));
+        let level = isPlayer ? 40 : (15 + (waveLevel * 3));
         
         let maxHp = Math.floor(0.01 * (2 * baseHP * legendBuff) * level) + level + 10;
         let atk = Math.floor(0.01 * (2 * baseAtk * legendBuff) * level) + 5;
@@ -76,16 +112,59 @@ async function fetchRogueStats(id, isPlayer, waveLevel) {
         
         return { maxHp: maxHp * 3, atk: atk, def: def, isLegendary: isLegendary || isMegaBoss };
     } catch (e) {
-        return { maxHp: 100, atk: 50, def: 50, isLegendary: false }; // Fallback bei API-Fehler
+        return { maxHp: 100, atk: 50, def: 50, isLegendary: false };
     }
 }
 
 // --- SETUP PHASE ---
 function startRogueSetup() {
     rogueTeam = [];
+    rogueSearchTerm = "";
+    rogueFilterType = "";
     renderRogueSetupSlots();
+    renderRogueSetupSearch(); 
     renderRogueSetupDex();
     showScreen('screen-rogue-setup');
+}
+
+function renderRogueSetupSearch() {
+    let container = document.getElementById('rogue-search-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'rogue-search-container';
+        container.style.cssText = "display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 15px; padding: 0 10px;";
+        
+        const grid = document.getElementById('rogue-select-grid');
+        grid.parentNode.insertBefore(container, grid);
+    }
+    
+    container.innerHTML = `
+        <div style="background: #34495e; padding: 5px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; border: 1px solid #7f8c8d; flex: 1;">
+            <span style="font-size: 16px;">🔍</span>
+            <input type="text" placeholder="Pokémon suchen..." style="background: transparent; border: none; color: white; outline: none; width: 100%; font-size: 14px;" oninput="rogueSearchTerm = this.value.toLowerCase(); renderRogueSetupDex();">
+        </div>
+        <select style="background: #34495e; color: white; border: 1px solid #7f8c8d; padding: 7px; border-radius: 10px; font-size: 14px; outline: none;" onchange="rogueFilterType = this.value; renderRogueSetupDex();">
+            <option value="">Alle Typen</option>
+            <option value="normal">Normal</option>
+            <option value="fire">Feuer</option>
+            <option value="water">Wasser</option>
+            <option value="grass">Pflanze</option>
+            <option value="electric">Elektro</option>
+            <option value="ice">Eis</option>
+            <option value="fighting">Kampf</option>
+            <option value="poison">Gift</option>
+            <option value="ground">Boden</option>
+            <option value="flying">Flug</option>
+            <option value="psychic">Psycho</option>
+            <option value="bug">Käfer</option>
+            <option value="rock">Gestein</option>
+            <option value="ghost">Geist</option>
+            <option value="dragon">Drache</option>
+            <option value="dark">Unlicht</option>
+            <option value="steel">Stahl</option>
+            <option value="fairy">Fee</option>
+        </select>
+    `;
 }
 
 function renderRogueSetupSlots() {
@@ -116,9 +195,22 @@ function renderRogueSetupDex() {
         let pkm = dex[id];
         if(!pkm) continue;
         
+        // Filter-Logik
+        if (rogueSearchTerm && !pkm.name.toLowerCase().includes(rogueSearchTerm)) continue;
+        if (rogueFilterType && !pkm.types.includes(rogueFilterType)) continue;
+        
         const isSelected = rogueTeam.includes(String(id));
+        const isMega = parseInt(id) > 10000; // Check für Mega/Primal Hintergrund
+        
         const div = document.createElement('div');
         div.className = isSelected ? 'dex-entry caught selected-for-raid' : 'dex-entry caught'; 
+        
+        // Spezielles Mega-Design
+        if (isMega) {
+            div.style.background = "linear-gradient(135deg, #8e44ad, #2c3e50)";
+            div.style.border = "2px solid #f1c40f";
+        }
+        
         div.style.cursor = isSelected ? 'default' : 'pointer';
         
         if(!isSelected) {
@@ -126,7 +218,11 @@ function renderRogueSetupDex() {
         }
 
         let typeHtml = pkm.types.map(t => `<img class="camp-select-type-icon" style="background-color: ${(typeof typeColors !== 'undefined') ? typeColors[t] : '#777'};" src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${t}.svg">`).join('');
-        div.innerHTML = `<img class="dex-img" src="${pkm.img}"><div class="dex-id">#${id}</div><div class="dex-name">${pkm.name}</div><div class="camp-select-types">${typeHtml}</div>`;
+        
+        // Zeige Shiny-Icon an falls es ein Shiny ist
+        let shinyBadge = pkm.isShiny ? `<div style="position: absolute; top: 2px; left: 2px; font-size: 10px;">✨</div>` : ``;
+        
+        div.innerHTML = `${shinyBadge}<img class="dex-img" src="${pkm.img}"><div class="dex-id">#${id}</div><div class="dex-name">${pkm.name}</div><div class="camp-select-types">${typeHtml}</div>`;
         grid.appendChild(div);
     }
 }
@@ -170,6 +266,14 @@ async function startRogueRun() {
     adrenalineActive = false;
     focusSashActive = false;
 
+    // --- NEU: Speed Reset ---
+    isSpeedModeActive = false;
+    rogueSpeedMultiplier = 1.0;
+
+    currentLootBuff = 15;
+    currentLootHp = 20;
+    currentLootTeam = 15; 
+
     currentBiomeIndex = Math.floor(Math.random() * rogueBiomes.length);
     document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
     
@@ -206,6 +310,35 @@ async function startRogueRun() {
         autoBtn.innerText = "🤖 Auto: AUS";
     }
 
+    // --- NEU: Speed-Button Setup ---
+    if(!document.getElementById('rogue-speed-btn')) {
+        const speedBtn = document.createElement('button');
+        speedBtn.id = 'rogue-speed-btn';
+        speedBtn.className = 'camp-action-btn';
+        speedBtn.style.cssText = "width: auto; padding: 5px 10px; font-size: 10px; margin-left: 5px;";
+        speedBtn.onclick = toggleSpeedMode;
+        navBar.insertBefore(speedBtn, document.getElementById('rogue-wave-display'));
+    }
+    
+    // Level Check via HTML Element 
+    let playerLevel = 1;
+    if (typeof currentLevel !== 'undefined') {
+        playerLevel = currentLevel;
+    } else if (document.getElementById('trainer-lvl')) {
+        playerLevel = parseInt(document.getElementById('trainer-lvl').innerText) || 1;
+    } else {
+        playerLevel = parseInt(localStorage.getItem('pogo_level')) || 1;
+    }
+    
+    const speedBtn = document.getElementById('rogue-speed-btn');
+    if (playerLevel >= SPEED_UNLOCK_LEVEL) {
+        speedBtn.style.display = "inline-block";
+        speedBtn.style.background = "#7f8c8d";
+        speedBtn.innerText = "⏩ x2 AUS";
+    } else {
+        speedBtn.style.display = "none"; 
+    }
+
     if(!document.getElementById('rogue-item-menu')) {
         const itemMenu = document.createElement('div');
         itemMenu.id = 'rogue-item-menu';
@@ -231,6 +364,18 @@ function toggleAutoMode() {
         btn.style.background = '#7f8c8d';
         btn.innerText = "🤖 Auto: AUS";
     }
+}
+
+// --- NEU: Speed-Modus Funktion ---
+function toggleSpeedMode() {
+    isSpeedModeActive = !isSpeedModeActive;
+    rogueSpeedMultiplier = isSpeedModeActive ? 0.4 : 1.0; 
+    
+    const btn = document.getElementById('rogue-speed-btn');
+    btn.style.background = isSpeedModeActive ? '#f39c12' : '#7f8c8d';
+    btn.innerText = isSpeedModeActive ? "⏩ x2 AN" : "⏩ x2 AUS";
+    
+    logMsg(isSpeedModeActive ? "⏩ Turbo-Modus aktiviert!" : "▶️ Normale Geschwindigkeit.", "heal");
 }
 
 function getBestRoguePokemonIndex() {
@@ -269,6 +414,7 @@ function getBestRoguePokemonIndex() {
 function checkRogueAutoTurn() {
     if(!isAutoModeActive || !isRogueCombatActive) return;
     
+    // TIMER MIT MULTIPLIKATOR
     setTimeout(() => {
         if(!isAutoModeActive || !isRogueCombatActive) return;
         
@@ -310,7 +456,7 @@ function checkRogueAutoTurn() {
         } else {
             roguePlayerAttack('fast');
         }
-    }, 800);
+    }, 800 * rogueSpeedMultiplier);
 }
 
 function logMsg(msg, cssClass = "") {
@@ -319,13 +465,12 @@ function logMsg(msg, cssClass = "") {
     log.scrollTop = log.scrollHeight;
 }
 
-// NEU: Boss Warnungs Funktion
 function triggerBossWarning() {
     let warn = document.createElement('div');
     warn.innerHTML = "⚠️ MEGA BOSS WELLE ⚠️";
     warn.className = "boss-warning-overlay";
     document.getElementById('screen-rogue-battle').appendChild(warn);
-    setTimeout(() => warn.remove(), 3500);
+    setTimeout(() => warn.remove(), 3500); // Kein Speed-Multi, damit es lesbar bleibt
 }
 
 // --- KAMPF / WELLE ---
@@ -333,33 +478,28 @@ async function startNextWave() {
     isRogueCombatActive = false;
     document.getElementById('rogue-log').innerHTML = "";
     document.getElementById('rogue-wave-display').innerText = "Welle " + rogueWave;
-    document.getElementById('rogue-enemy-sprite').className = "rogue-sprite-enemy"; // Reset Aura
+    document.getElementById('rogue-enemy-sprite').className = "rogue-sprite-enemy"; 
     
     logMsg(`Suche nach wildem Gegner...`);
     let randomId;
     
-    // NEU: Boss Logic (Mega alle 10, Normal Legendär alle 5)
     if (rogueWave > 0 && rogueWave % 10 === 0) {
         randomId = ROGUE_MEGA_BOSS_IDS[Math.floor(Math.random() * ROGUE_MEGA_BOSS_IDS.length)];
         logMsg(`🚨 SUPER-BOSS WELLE! Ein mächtiges Mega-Pokémon taucht auf! 🚨`, "dmg");
         
-        // Zufälliges episches Boss Biome setzen
         let bossBg = bossBiomes[Math.floor(Math.random() * bossBiomes.length)];
         document.getElementById('rogue-arena').style.backgroundImage = `url('${bossBg}')`;
         document.getElementById('rogue-enemy-sprite').classList.add('boss-aura');
-        
         triggerBossWarning();
         
     } else if (rogueWave > 0 && rogueWave % 5 === 0) {
         randomId = ROGUE_LEGENDARY_IDS[Math.floor(Math.random() * ROGUE_LEGENDARY_IDS.length)];
         logMsg(`⚠️ BOSS-WELLE! Ein seltenes Legendäres taucht auf! ⚠️`, "eff");
         
-        // Normaler Biome Wechsel (Dein alter Code)
         currentBiomeIndex = (currentBiomeIndex + 1) % rogueBiomes.length;
         document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
     } else {
         randomId = Math.floor(Math.random() * 1025) + 1;
-        // Falls wir nach einer Boss-Welle wieder in ein normales Biome müssen:
         if ((rogueWave - 1) % 10 === 0 && rogueWave > 1) {
             currentBiomeIndex = (currentBiomeIndex + 1) % rogueBiomes.length;
             document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
@@ -373,28 +513,54 @@ async function startNextWave() {
         let eName = data.name.toUpperCase();
         try { const sRes = await fetch(data.species.url); const deNameObj = (await sRes.json()).names.find(n => n.language.name === 'de'); if (deNameObj) eName = deNameObj.name; } catch(e) {}
         
-        // Namen aufräumen für Megas (Macht aus "venusaur-mega" -> "MEGA VENUSAUR")
         if (eName.includes('-MEGA')) eName = "MEGA " + eName.replace('-MEGA', '').replace('-X', ' X').replace('-Y', ' Y');
         if (eName.includes('-PRIMAL')) eName = "PROTO " + eName.replace('-PRIMAL', '');
         
         let stats = await fetchRogueStats(data.id, false, rogueWave);
         
+        // Shiny Chance berechnen (5% Wahrscheinlichkeit)
+        let isEnemyShiny = Math.random() < 0.05; 
+        
+        let hdImage = data.sprites.other['official-artwork'].front_default || data.sprites.front_default;
+        
+        // Shiny Sprite laden, falls es glänzt
+        if (isEnemyShiny) {
+            let shinyHd = data.sprites.other['official-artwork'].front_shiny;
+            let shinyNormal = data.sprites.front_shiny;
+            hdImage = shinyHd || shinyNormal || hdImage; 
+        }
+        
         rogueEnemy = {
             name: eName,
             baseId: data.id,
             types: data.types.map(t => t.type.name),
-            img: data.sprites.front_default || data.sprites.other['official-artwork'].front_default,
+            img: hdImage, 
             maxHp: stats.maxHp,
             hp: stats.maxHp,
             atk: stats.atk,
             def: stats.def,
-            isLegendary: stats.isLegendary
+            isLegendary: stats.isLegendary,
+            isShiny: isEnemyShiny // Shiny Status sichern
+        }
+        
+        // Optische Shiny Aura einfügen
+        const spriteEl = document.getElementById('rogue-enemy-sprite');
+        if (isEnemyShiny) {
+            spriteEl.style.filter = "drop-shadow(0 0 15px #f1c40f)";
+        } else {
+            spriteEl.style.filter = "none";
         }
         
         updateRogueUI();
-        logMsg(`Wilde Begegnung mit <span class="dmg">${eName}</span>!`);
-        isRogueCombatActive = true;
         
+        // Spezielle Log-Nachricht für Shinys
+        if (isEnemyShiny) {
+            logMsg(`✨ Ein schillerndes <span style="color:#f1c40f; font-weight:bold;">${eName}</span> taucht auf! ✨`, "heal");
+        } else {
+            logMsg(`Wilde Begegnung mit <span class="dmg">${eName}</span>!`);
+        }
+        
+        isRogueCombatActive = true;
         checkRogueAutoTurn();
         
     } catch(e) {
@@ -453,7 +619,8 @@ function animateSprite(spriteId, animClass, duration) {
     el.classList.remove(animClass);
     void el.offsetWidth;
     el.classList.add(animClass);
-    setTimeout(() => { el.classList.remove(animClass); }, duration);
+    // TIMER MIT MULTIPLIKATOR
+    setTimeout(() => { el.classList.remove(animClass); }, duration * rogueSpeedMultiplier);
 }
 
 function showDmgAnim(isPlayerTarget, text, color) {
@@ -494,6 +661,7 @@ function roguePlayerAttack(atkKind) {
     
     animateSprite('rogue-player-sprite', 'anim-lunge-player', 300);
     
+    // TIMER MIT MULTIPLIKATOR
     setTimeout(() => {
         let mult = calcDamage(aType, rogueEnemy.types);
         
@@ -516,14 +684,15 @@ function roguePlayerAttack(atkKind) {
         animateSprite('rogue-enemy-sprite', 'anim-hit', 400);
         updateRogueUI();
         
+        // TIMER MIT MULTIPLIKATOR
         setTimeout(() => {
             if(rogueEnemy.hp <= 0) {
                 winWave();
             } else {
                 rogueEnemyAttack();
             }
-        }, 800);
-    }, 300);
+        }, 800 * rogueSpeedMultiplier);
+    }, 300 * rogueSpeedMultiplier);
 }
 
 function rogueEnemyAttack() {
@@ -532,6 +701,7 @@ function rogueEnemyAttack() {
     
     animateSprite('rogue-enemy-sprite', 'anim-lunge-enemy', 300);
     
+    // TIMER MIT MULTIPLIKATOR
     setTimeout(() => {
         let mult = calcDamage(eType, player.types);
         
@@ -556,16 +726,17 @@ function rogueEnemyAttack() {
         
         updateRogueUI();
         
+        // TIMER MIT MULTIPLIKATOR
         setTimeout(() => {
             if(player.hp <= 0) {
                 logMsg(`${player.name} wurde besiegt!`, "dmg");
-                setTimeout(() => handlePlayerFaint(), 1000);
+                setTimeout(() => handlePlayerFaint(), 1000 * rogueSpeedMultiplier);
             } else {
                 isRogueCombatActive = true; 
                 checkRogueAutoTurn();
             }
-        }, 800);
-    }, 300);
+        }, 800 * rogueSpeedMultiplier);
+    }, 300 * rogueSpeedMultiplier);
 }
 
 function openRogueSwitchMenu(isForced = false) {
@@ -628,7 +799,8 @@ function switchRoguePokemon(index, wasForced) {
     
     if(!wasForced) {
         isRogueCombatActive = false;
-        setTimeout(() => rogueEnemyAttack(), 1000);
+        // TIMER MIT MULTIPLIKATOR
+        setTimeout(() => rogueEnemyAttack(), 1000 * rogueSpeedMultiplier);
     } else {
         isRogueCombatActive = true;
         checkRogueAutoTurn();
@@ -689,12 +861,12 @@ function throwRogueBall(ballType) {
     logMsg(`Du wirfst einen Ball!`);
     animateSprite('rogue-enemy-sprite', 'anim-hit', 500);
     
+    // TIMER MIT MULTIPLIKATOR
     setTimeout(() => {
         let hpRatio = rogueEnemy.hp / rogueEnemy.maxHp;
         
-        // Mache Legendäre Bosse doppelt so schwer zu fangen (außer Meisterball)
         if (rogueEnemy.isLegendary && ballType !== 'masterball') {
-            hpRatio = hpRatio * 2.5; // Megas sind nochmal schwerer als normale Legendäre
+            hpRatio = hpRatio * 2.5; 
         }
         
         let success = false;
@@ -706,18 +878,28 @@ function throwRogueBall(ballType) {
         if (success) {
             logMsg(`Erfolg! ${rogueEnemy.name} wurde gefangen!`, "heal");
             
-            // NEU: Pokédex wird erweitert, auch um Mega-Einträge!
             let dex = (typeof pokedex !== 'undefined') ? pokedex : (JSON.parse(localStorage.getItem('pogo_dex_v6')) || {});
-            dex[rogueEnemy.baseId] = { name: rogueEnemy.name, img: rogueEnemy.img, baseId: rogueEnemy.baseId, types: rogueEnemy.types };
+            
+            // Speichert die gefangenen Werte, inklusive Shiny-Status in den Dex!
+            dex[rogueEnemy.baseId] = { 
+                name: rogueEnemy.name, 
+                img: rogueEnemy.img, 
+                baseId: rogueEnemy.baseId, 
+                types: rogueEnemy.types,
+                isShiny: rogueEnemy.isShiny || false 
+            };
+            
             localStorage.setItem('pogo_dex_v6', JSON.stringify(dex));
             if(typeof pokedex !== 'undefined') pokedex = dex;
             
-            setTimeout(() => { winWave(true); }, 1500);
+            // TIMER MIT MULTIPLIKATOR
+            setTimeout(() => { winWave(true); }, 1500 * rogueSpeedMultiplier);
         } else {
             logMsg(`Oh nein! ${rogueEnemy.name} ist ausgebrochen! Gegner HP noch zu hoch.`, "dmg");
-            setTimeout(() => { rogueEnemyAttack(); }, 1500);
+            // TIMER MIT MULTIPLIKATOR
+            setTimeout(() => { rogueEnemyAttack(); }, 1500 * rogueSpeedMultiplier);
         }
-    }, 1000);
+    }, 1000 * rogueSpeedMultiplier);
 }
 
 
@@ -748,7 +930,7 @@ function handlePlayerFaint() {
 }
 
 function surrenderRogue() {
-    isAutoModeActive = false; // Sicherheitshalber
+    isAutoModeActive = false; 
     if(typeof showCampWillow === 'function') {
         document.getElementById('willow-close-hint').style.display = 'none';
         showCampWillow(`<b>Flucht?</b><br><br>Willst du die Expedition wirklich abbrechen? Dein bisher erbeuteter Sternenstaub (${rogueRunStardust} ✨) ist sicher, aber du startest danach von vorn!<br><br>
@@ -759,10 +941,10 @@ function surrenderRogue() {
     }
 }
 
-// --- LOOT PHASE ---
 function winWave(wasCaught = false) {
-    // Doppelter Sternenstaub nach einer epischen Boss-Welle
-    let waveDust = (rogueWave % 10 === 0) ? 500 : 100;
+    let bossesDefeated = Math.floor((rogueWave - 1) / 10);
+    let baseWaveDust = 100 + (bossesDefeated * 50); 
+    let waveDust = (rogueWave % 10 === 0) ? (500 * (bossesDefeated + 1)) : baseWaveDust;
     
     if (starShardWaves > 0) { waveDust = Math.floor(waveDust * 1.5); starShardWaves--; }
     if (autoModeUsedThisWave) waveDust = Math.floor(waveDust / 2);
@@ -777,7 +959,17 @@ function winWave(wasCaught = false) {
         localStorage.setItem('pogo_stardust', s + waveDust);
     }
     
+    if(typeof addXp === 'function') {
+        let waveXp = (rogueWave % 10 === 0) ? 100 : 15;
+        addXp(waveXp);
+    }
+    
     autoModeUsedThisWave = false; 
+    
+    currentLootBuff = 15 + (bossesDefeated * 5);  
+    currentLootHp = 20 + (bossesDefeated * 5);    
+    currentLootTeam = 15 + (bossesDefeated * 2);  
+    
     rogueWave++;
     
     showScreen('screen-rogue-loot');
@@ -785,19 +977,28 @@ function winWave(wasCaught = false) {
     const container = document.getElementById('rogue-loot-container');
     container.innerHTML = `<div style="color: #2ecc71; font-weight: bold; margin-bottom: 15px;">Welle geschafft: +${waveDust} ✨</div>`;
     
-    const lootPool = [
+    const consumables = [
         { id: 'heal', name: 'Trank', icon: '🧪', desc: 'Heilt dein aktives Pokémon um 50%.' },
         { id: 'toprevive', name: 'Top-Beleber', icon: '💛', desc: 'Belebt ein besiegtes Team-Mitglied mit 100% HP.' },
-        { id: 'adrenaline', name: 'Adrenalin-Orb', icon: '🔥', desc: 'Dein erster Angriff in der nächsten Welle macht 50% mehr Schaden.' },
-        { id: 'focus', name: 'Fokusgurt', icon: '🛡️', desc: 'Dein Team blockt den ersten gegnerischen Angriff der nächsten Welle ab.' },
+        { id: 'adrenaline', name: 'Adrenalin-Orb', icon: '🔥', desc: 'Dein erster Angriff macht nächste Runde 50% mehr Schaden.' },
+        { id: 'focus', name: 'Fokusgurt', icon: '🛡️', desc: 'Blockt den ersten gegnerischen Angriff der nächsten Welle ab.' },
         { id: 'tm', name: 'TM (Technikmaschine)', icon: '💿', desc: 'Ändert den Lade-Attacken-Typ deines aktiven Pokémon zufällig.' },
-        { id: 'starshard', name: 'Sternenstück-Splitter', icon: '⭐', desc: 'Erhöht die Belohnung der nächsten 3 Wellen um 50%.' },
-        { id: 'egg', name: 'Mysteriöses Ei', icon: '🥚', desc: 'Glücksspiel: 50% Chance auf Vollheilung aller, 50% Chance auf 10 HP Schaden.' }
+        { id: 'starshard', name: 'Sternenstück', icon: '⭐', desc: 'Erhöht die Belohnung der nächsten 3 Wellen um 50%.' }
+    ];
+
+    const buffs = [
+        { id: 'protein', name: 'Protein (Dauerhaft)', icon: '💪', desc: `Dein aktives Pokémon erhält +${currentLootBuff}% auf Angriff.` },
+        { id: 'eisen', name: 'Eisen (Dauerhaft)', icon: '🛡️', desc: `Dein aktives Pokémon erhält +${currentLootBuff}% auf Verteidigung.` },
+        { id: 'kpplus', name: 'KP-Plus (Dauerhaft)', icon: '❤️', desc: `Dein aktives Pokémon erhält +${currentLootHp}% auf Max. HP.` },
+        { id: 'sonderbonbon', name: 'Sonderbonbon', icon: '🍬', desc: `TEAM LEVEL UP! Alle im Team erhalten +${currentLootTeam}% auf alle Werte.` }
     ];
     
-    let shuffled = lootPool.sort(() => 0.5 - Math.random()).slice(0, 3);
+    let selectedConsumables = consumables.sort(() => 0.5 - Math.random()).slice(0, 1);
+    let selectedBuffs = buffs.sort(() => 0.5 - Math.random()).slice(0, 2);
     
-    shuffled.forEach(item => {
+    let finalLoot = [...selectedConsumables, ...selectedBuffs].sort(() => 0.5 - Math.random());
+    
+    finalLoot.forEach(item => {
         container.innerHTML += `
             <div class="loot-card" onclick="confirmRogueLoot('${item.id}', '${item.name}')">
                 <div style="font-size: 30px; margin-bottom: 10px;">${item.icon}</div>
@@ -847,14 +1048,29 @@ function applyRogueLoot(lootId) {
             player.types.push(randomType);
         }
     }
-    else if(lootId === 'egg') {
-        if(Math.random() > 0.5) {
-            rogueTeam.forEach(p => { p.hp = p.maxHp; });
-            setTimeout(() => { showCampWillow("Glückwunsch! Das Ei enthielt pure Heilenergie. Dein gesamtes Team ist wieder bei 100% HP."); }, 500);
-        } else {
-            rogueTeam.forEach(p => { p.hp -= 10; });
-            setTimeout(() => { showCampWillow("Oh nein... Das Ei ist geplatzt und hat giftige Dämpfe freigesetzt. Dein Team verliert 10 HP."); }, 500);
-        }
+    else if(lootId === 'protein') {
+        player.atk = Math.floor(player.atk * (1 + (currentLootBuff / 100)));
+        logMsg(`${player.name} fühlt sich viel stärker!`, "heal");
+    }
+    else if(lootId === 'eisen') {
+        player.def = Math.floor(player.def * (1 + (currentLootBuff / 100)));
+        logMsg(`${player.name}s Abwehr ist gestiegen!`, "heal");
+    }
+    else if(lootId === 'kpplus') {
+        let hpBoost = Math.floor(player.maxHp * (currentLootHp / 100));
+        player.maxHp += hpBoost;
+        player.hp += hpBoost; 
+        logMsg(`${player.name} hat jetzt mehr KP!`, "heal");
+    }
+    else if(lootId === 'sonderbonbon') {
+        rogueTeam.forEach(p => {
+            p.atk = Math.floor(p.atk * (1 + (currentLootTeam / 100)));
+            p.def = Math.floor(p.def * (1 + (currentLootTeam / 100)));
+            let hpBoost = Math.floor(p.maxHp * (currentLootTeam / 100));
+            p.maxHp += hpBoost;
+            p.hp += hpBoost;
+        });
+        logMsg(`Das ganze Team hat ein Level-Up!`, "heal");
     }
     
     showScreen('screen-rogue-battle');
