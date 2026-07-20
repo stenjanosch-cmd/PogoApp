@@ -21,15 +21,15 @@ let starShardWaves = 0;
 let adrenalineActive = false;
 let focusSashActive = false;
 
-// --- NEU: Speed-Modus Variablen ---
+// --- Speed-Modus Variablen ---
 let rogueSpeedMultiplier = 1.0; 
 let isSpeedModeActive = false;
 const SPEED_UNLOCK_LEVEL = 10; // Ab diesem Spielerlevel wird der Button sichtbar
 
 // Loot Skalierungs-Variablen
-let currentLootBuff = 15;
-let currentLootHp = 20;
-let currentLootTeam = 15; 
+let currentLootBuff = 5;
+let currentLootHp = 8;
+let currentLootTeam = 3; 
 
 // Normale Arena-Hintergründe
 const rogueBiomes = [
@@ -47,7 +47,7 @@ const bossBiomes = [
     'https://github.com/stenjanosch-cmd/PogoApp/blob/main/Floating_crystalline_boss_arena_202607192128.jpeg?raw=true'
 ];
 
-// Massiv erweiterte Legendären-Liste (inkl. Ultrabestien, Tapus etc.)
+// Legendären-Liste (inkl. Ultrabestien, Tapus etc.)
 const ROGUE_LEGENDARY_IDS = [
     144, 145, 146, 150, 151, // Gen 1 
     243, 244, 245, 249, 250, 251, // Gen 2 
@@ -60,7 +60,7 @@ const ROGUE_LEGENDARY_IDS = [
     888, 889 // Zacian, Zamazenta
 ];
 
-// Massiv erweiterte Mega-Liste (Alle validen PokeAPI Mega IDs)
+// Mega-Liste
 const ROGUE_MEGA_BOSS_IDS = [
     10033, 10034, // Mega Glurak X/Y
     10036, 10037, // Mega Turtok, Bisaflor
@@ -200,12 +200,11 @@ function renderRogueSetupDex() {
         if (rogueFilterType && !pkm.types.includes(rogueFilterType)) continue;
         
         const isSelected = rogueTeam.includes(String(id));
-        const isMega = parseInt(id) > 10000; // Check für Mega/Primal Hintergrund
+        const isMega = parseInt(id) > 10000;
         
         const div = document.createElement('div');
         div.className = isSelected ? 'dex-entry caught selected-for-raid' : 'dex-entry caught'; 
         
-        // Spezielles Mega-Design
         if (isMega) {
             div.style.background = "linear-gradient(135deg, #8e44ad, #2c3e50)";
             div.style.border = "2px solid #f1c40f";
@@ -219,7 +218,6 @@ function renderRogueSetupDex() {
 
         let typeHtml = pkm.types.map(t => `<img class="camp-select-type-icon" style="background-color: ${(typeof typeColors !== 'undefined') ? typeColors[t] : '#777'};" src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${t}.svg">`).join('');
         
-        // Zeige Shiny-Icon an falls es ein Shiny ist
         let shinyBadge = pkm.isShiny ? `<div style="position: absolute; top: 2px; left: 2px; font-size: 10px;">✨</div>` : ``;
         
         div.innerHTML = `${shinyBadge}<img class="dex-img" src="${pkm.img}"><div class="dex-id">#${id}</div><div class="dex-name">${pkm.name}</div><div class="camp-select-types">${typeHtml}</div>`;
@@ -266,13 +264,13 @@ async function startRogueRun() {
     adrenalineActive = false;
     focusSashActive = false;
 
-    // --- NEU: Speed Reset ---
+    // --- Speed Reset ---
     isSpeedModeActive = false;
     rogueSpeedMultiplier = 1.0;
 
-    currentLootBuff = 15;
-    currentLootHp = 20;
-    currentLootTeam = 15; 
+    currentLootBuff = 5;
+    currentLootHp = 8;
+    currentLootTeam = 3; 
 
     currentBiomeIndex = Math.floor(Math.random() * rogueBiomes.length);
     document.getElementById('rogue-arena').style.backgroundImage = `url('${rogueBiomes[currentBiomeIndex]}')`;
@@ -310,7 +308,6 @@ async function startRogueRun() {
         autoBtn.innerText = "🤖 Auto: AUS";
     }
 
-    // --- NEU: Speed-Button Setup ---
     if(!document.getElementById('rogue-speed-btn')) {
         const speedBtn = document.createElement('button');
         speedBtn.id = 'rogue-speed-btn';
@@ -320,7 +317,6 @@ async function startRogueRun() {
         navBar.insertBefore(speedBtn, document.getElementById('rogue-wave-display'));
     }
     
-    // 100% bombensicherer Level-Check über die index.html oder Fallbacks
     let playerLevel = 1;
     const lvlSpan = document.getElementById('trainer-lvl');
     if (lvlSpan) {
@@ -367,7 +363,6 @@ function toggleAutoMode() {
     }
 }
 
-// --- NEU: Speed-Modus Funktion ---
 function toggleSpeedMode() {
     isSpeedModeActive = !isSpeedModeActive;
     rogueSpeedMultiplier = isSpeedModeActive ? 0.4 : 1.0; 
@@ -415,7 +410,6 @@ function getBestRoguePokemonIndex() {
 function checkRogueAutoTurn() {
     if(!isAutoModeActive || !isRogueCombatActive) return;
     
-    // TIMER MIT MULTIPLIKATOR
     setTimeout(() => {
         if(!isAutoModeActive || !isRogueCombatActive) return;
         
@@ -471,7 +465,7 @@ function triggerBossWarning() {
     warn.innerHTML = "⚠️ MEGA BOSS WELLE ⚠️";
     warn.className = "boss-warning-overlay";
     document.getElementById('screen-rogue-battle').appendChild(warn);
-    setTimeout(() => warn.remove(), 3500); // Kein Speed-Multi, damit es lesbar bleibt
+    setTimeout(() => warn.remove(), 3500); 
 }
 
 // --- KAMPF / WELLE ---
@@ -519,12 +513,10 @@ async function startNextWave() {
         
         let stats = await fetchRogueStats(data.id, false, rogueWave);
         
-        // Shiny Chance berechnen (5% Wahrscheinlichkeit)
         let isEnemyShiny = Math.random() < 0.05; 
         
         let hdImage = data.sprites.other['official-artwork'].front_default || data.sprites.front_default;
         
-        // Shiny Sprite laden, falls es glänzt
         if (isEnemyShiny) {
             let shinyHd = data.sprites.other['official-artwork'].front_shiny;
             let shinyNormal = data.sprites.front_shiny;
@@ -541,10 +533,9 @@ async function startNextWave() {
             atk: stats.atk,
             def: stats.def,
             isLegendary: stats.isLegendary,
-            isShiny: isEnemyShiny // Shiny Status sichern
+            isShiny: isEnemyShiny 
         }
         
-        // Optische Shiny Aura einfügen
         const spriteEl = document.getElementById('rogue-enemy-sprite');
         if (isEnemyShiny) {
             spriteEl.style.filter = "drop-shadow(0 0 15px #f1c40f)";
@@ -554,7 +545,6 @@ async function startNextWave() {
         
         updateRogueUI();
         
-        // Spezielle Log-Nachricht für Shinys
         if (isEnemyShiny) {
             logMsg(`✨ Ein schillerndes <span style="color:#f1c40f; font-weight:bold;">${eName}</span> taucht auf! ✨`, "heal");
         } else {
@@ -620,7 +610,6 @@ function animateSprite(spriteId, animClass, duration) {
     el.classList.remove(animClass);
     void el.offsetWidth;
     el.classList.add(animClass);
-    // Animation Timeout ebenfalls beschleunigen
     setTimeout(() => { el.classList.remove(animClass); }, duration * rogueSpeedMultiplier);
 }
 
@@ -662,7 +651,6 @@ function roguePlayerAttack(atkKind) {
     
     animateSprite('rogue-player-sprite', 'anim-lunge-player', 300);
     
-    // TIMER MIT MULTIPLIKATOR
     setTimeout(() => {
         let mult = calcDamage(aType, rogueEnemy.types);
         
@@ -685,7 +673,6 @@ function roguePlayerAttack(atkKind) {
         animateSprite('rogue-enemy-sprite', 'anim-hit', 400);
         updateRogueUI();
         
-        // TIMER MIT MULTIPLIKATOR
         setTimeout(() => {
             if(rogueEnemy.hp <= 0) {
                 winWave();
@@ -702,7 +689,6 @@ function rogueEnemyAttack() {
     
     animateSprite('rogue-enemy-sprite', 'anim-lunge-enemy', 300);
     
-    // TIMER MIT MULTIPLIKATOR
     setTimeout(() => {
         let mult = calcDamage(eType, player.types);
         
@@ -727,7 +713,6 @@ function rogueEnemyAttack() {
         
         updateRogueUI();
         
-        // TIMER MIT MULTIPLIKATOR
         setTimeout(() => {
             if(player.hp <= 0) {
                 logMsg(`${player.name} wurde besiegt!`, "dmg");
@@ -800,7 +785,6 @@ function switchRoguePokemon(index, wasForced) {
     
     if(!wasForced) {
         isRogueCombatActive = false;
-        // TIMER MIT MULTIPLIKATOR
         setTimeout(() => rogueEnemyAttack(), 1000 * rogueSpeedMultiplier);
     } else {
         isRogueCombatActive = true;
@@ -862,7 +846,6 @@ function throwRogueBall(ballType) {
     logMsg(`Du wirfst einen Ball!`);
     animateSprite('rogue-enemy-sprite', 'anim-hit', 500);
     
-    // TIMER MIT MULTIPLIKATOR
     setTimeout(() => {
         let hpRatio = rogueEnemy.hp / rogueEnemy.maxHp;
         
@@ -881,8 +864,6 @@ function throwRogueBall(ballType) {
             
             let dex = (typeof pokedex !== 'undefined') ? pokedex : (JSON.parse(localStorage.getItem('pogo_dex_v6')) || {});
             
-            // --- FIX: Shiny überschreiben verhindern! ---
-            // Prüfen ob es bereits gefangen ist und bereits Shiny war
             let existingEntry = dex[rogueEnemy.baseId];
             let alreadyShiny = existingEntry && existingEntry.isShiny;
             let saveShinyStatus = rogueEnemy.isShiny || alreadyShiny || false;
@@ -899,16 +880,13 @@ function throwRogueBall(ballType) {
             localStorage.setItem('pogo_dex_v6', JSON.stringify(dex));
             if(typeof pokedex !== 'undefined') pokedex = dex;
             
-            // TIMER MIT MULTIPLIKATOR
             setTimeout(() => { winWave(true); }, 1500 * rogueSpeedMultiplier);
         } else {
             logMsg(`Oh nein! ${rogueEnemy.name} ist ausgebrochen! Gegner HP noch zu hoch.`, "dmg");
-            // TIMER MIT MULTIPLIKATOR
             setTimeout(() => { rogueEnemyAttack(); }, 1500 * rogueSpeedMultiplier);
         }
     }, 1000 * rogueSpeedMultiplier);
 }
-
 
 function handlePlayerFaint() {
     let aliveIndex = rogueTeam.findIndex(p => p.hp > 0);
@@ -973,44 +951,52 @@ function winWave(wasCaught = false) {
     
     autoModeUsedThisWave = false; 
     
-    currentLootBuff = 15 + (bossesDefeated * 5);  
-    currentLootHp = 20 + (bossesDefeated * 5);    
-    currentLootTeam = 15 + (bossesDefeated * 2);  
+    currentLootBuff = 5 + Math.floor(bossesDefeated * 0.5);  
+    currentLootHp = 8 + Math.floor(bossesDefeated * 1);    
+    currentLootTeam = 3 + Math.floor(bossesDefeated * 0.5);  
     
     rogueWave++;
     
     showScreen('screen-rogue-loot');
     
     const container = document.getElementById('rogue-loot-container');
-    container.innerHTML = `<div style="color: #2ecc71; font-weight: bold; margin-bottom: 15px;">Welle geschafft: +${waveDust} ✨</div>`;
+    container.innerHTML = `<div style="font-family: 'Righteous'; color: #2ecc71; font-size: 18px; text-shadow: 1px 1px 2px black; margin-bottom: 20px;">Beute: +${waveDust} ✨</div>`;
     
+    // OFFIZIELLE POKEMON ITEMS STATT EMOJIS
     const consumables = [
-        { id: 'heal', name: 'Trank', icon: '🧪', desc: 'Heilt dein aktives Pokémon um 50%.' },
-        { id: 'toprevive', name: 'Top-Beleber', icon: '💛', desc: 'Belebt ein besiegtes Team-Mitglied mit 100% HP.' },
-        { id: 'adrenaline', name: 'Adrenalin-Orb', icon: '🔥', desc: 'Dein erster Angriff macht nächste Runde 50% mehr Schaden.' },
-        { id: 'focus', name: 'Fokusgurt', icon: '🛡️', desc: 'Blockt den ersten gegnerischen Angriff der nächsten Welle ab.' },
-        { id: 'tm', name: 'TM (Technikmaschine)', icon: '💿', desc: 'Ändert den Lade-Attacken-Typ deines aktiven Pokémon zufällig.' },
-        { id: 'starshard', name: 'Sternenstück', icon: '⭐', desc: 'Erhöht die Belohnung der nächsten 3 Wellen um 50%.' }
+        { id: 'heal', name: 'Trank', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/potion.png', desc: 'Heilt dein aktives Pokémon um 50%.' },
+        { id: 'toprevive', name: 'Top-Beleber', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/max-revive.png', desc: 'Belebt ein besiegtes Team-Mitglied mit 100% HP.' },
+        { id: 'adrenaline', name: 'Adrenalin-Orb', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/adrenaline-orb.png', desc: 'Dein erster Angriff macht nächste Runde 50% mehr Schaden.' },
+        { id: 'focus', name: 'Fokusgurt', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/focus-sash.png', desc: 'Blockt den ersten gegnerischen Angriff der nächsten Welle ab.' },
+        { id: 'tm', name: 'TM (Lade-Attacke)', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-normal.png', desc: 'Ändert den Lade-Attacken-Typ deines aktiven Pokémon zufällig.' },
+        { id: 'starshard', name: 'Sternenstück', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/star-piece.png', desc: 'Erhöht die Belohnung der nächsten 3 Wellen um 50%.' }
     ];
 
     const buffs = [
-        { id: 'protein', name: 'Protein (Dauerhaft)', icon: '💪', desc: `Dein aktives Pokémon erhält +${currentLootBuff}% auf Angriff.` },
-        { id: 'eisen', name: 'Eisen (Dauerhaft)', icon: '🛡️', desc: `Dein aktives Pokémon erhält +${currentLootBuff}% auf Verteidigung.` },
-        { id: 'kpplus', name: 'KP-Plus (Dauerhaft)', icon: '❤️', desc: `Dein aktives Pokémon erhält +${currentLootHp}% auf Max. HP.` },
-        { id: 'sonderbonbon', name: 'Sonderbonbon', icon: '🍬', desc: `TEAM LEVEL UP! Alle im Team erhalten +${currentLootTeam}% auf alle Werte.` }
+        { id: 'protein', name: 'Protein', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/protein.png', desc: `Dein aktives Pokémon erhält dauerhaft +${currentLootBuff}% auf Angriff.` },
+        { id: 'eisen', name: 'Eisen', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/iron.png', desc: `Dein aktives Pokémon erhält dauerhaft +${currentLootBuff}% auf Verteidigung.` },
+        { id: 'kpplus', name: 'KP-Plus', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/hp-up.png', desc: `Dein aktives Pokémon erhält dauerhaft +${currentLootHp}% auf Max. HP.` },
+        { id: 'sonderbonbon', name: 'Sonderbonbon', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/rare-candy.png', desc: `TEAM LEVEL UP! Alle im Team erhalten +${currentLootTeam}% auf alle Werte.` },
+        
+        { id: 'machtreif', name: 'Machtreif', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/power-bracer.png', desc: `Dein aktives Pokémon erhält dauerhaft +${Math.floor(currentLootBuff * 0.6)}% auf Angriff.` },
+        { id: 'machtgurt', name: 'Machtgurt', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/power-belt.png', desc: `Dein aktives Pokémon erhält dauerhaft +${Math.floor(currentLootBuff * 0.6)}% auf Verteidigung.` },
+        { id: 'machtgewicht', name: 'Machtgewicht', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/power-weight.png', desc: `Dein aktives Pokémon erhält dauerhaft +${Math.floor(currentLootHp * 0.6)}% auf Max. HP.` },
+        { id: 'epteiler', name: 'EP-Teiler', icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/exp-share.png', desc: `Das gesamte Team erhält dauerhaft +${Math.floor(currentLootTeam * 0.5)}% auf alle Werte.` }
     ];
     
+    // ZURÜCK AUF 1 Consumable + 2 Buffs = 3 Auswahlmöglichkeiten
     let selectedConsumables = consumables.sort(() => 0.5 - Math.random()).slice(0, 1);
-    let selectedBuffs = buffs.sort(() => 0.5 - Math.random()).slice(0, 2);
+    let selectedBuffs = buffs.sort(() => 0.5 - Math.random()).slice(0, 2); 
     
     let finalLoot = [...selectedConsumables, ...selectedBuffs].sort(() => 0.5 - Math.random());
     
     finalLoot.forEach(item => {
+        // NEUES HTML FÜR DIE LOOT CARDS (Keine Emojis mehr)
         container.innerHTML += `
             <div class="loot-card" onclick="confirmRogueLoot('${item.id}', '${item.name}')">
-                <div style="font-size: 30px; margin-bottom: 10px;">${item.icon}</div>
-                <div style="font-weight: 900; color: #f1c40f; margin-bottom: 5px;">${item.name}</div>
-                <div style="font-size: 11px; color: #ccc;">${item.desc}</div>
+                <img class="loot-icon" src="${item.icon}" alt="${item.name}">
+                <div class="loot-title">${item.name}</div>
+                <div class="loot-desc">${item.desc}</div>
             </div>
         `;
     });
@@ -1078,6 +1064,30 @@ function applyRogueLoot(lootId) {
             p.hp += hpBoost;
         });
         logMsg(`Das ganze Team hat ein Level-Up!`, "heal");
+    }
+    else if(lootId === 'machtreif') {
+        player.atk = Math.floor(player.atk * (1 + ((currentLootBuff * 0.6) / 100)));
+        logMsg(`${player.name}s Angriff stieg leicht!`, "heal");
+    }
+    else if(lootId === 'machtgurt') {
+        player.def = Math.floor(player.def * (1 + ((currentLootBuff * 0.6) / 100)));
+        logMsg(`${player.name}s Abwehr stieg leicht!`, "heal");
+    }
+    else if(lootId === 'machtgewicht') {
+        let hpBoost = Math.floor(player.maxHp * ((currentLootHp * 0.6) / 100));
+        player.maxHp += hpBoost;
+        player.hp += hpBoost;
+        logMsg(`${player.name} hat minimal mehr KP!`, "heal");
+    }
+    else if(lootId === 'epteiler') {
+        rogueTeam.forEach(p => {
+            p.atk = Math.floor(p.atk * (1 + ((currentLootTeam * 0.5) / 100)));
+            p.def = Math.floor(p.def * (1 + ((currentLootTeam * 0.5) / 100)));
+            let hpBoost = Math.floor(p.maxHp * ((currentLootTeam * 0.5) / 100));
+            p.maxHp += hpBoost;
+            p.hp += hpBoost;
+        });
+        logMsg(`Das Team wurde leicht gestärkt!`, "heal");
     }
     
     showScreen('screen-rogue-battle');
