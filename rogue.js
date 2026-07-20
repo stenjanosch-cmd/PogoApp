@@ -320,12 +320,13 @@ async function startRogueRun() {
         navBar.insertBefore(speedBtn, document.getElementById('rogue-wave-display'));
     }
     
-    // Level Check via HTML Element 
+    // 100% bombensicherer Level-Check über die index.html oder Fallbacks
     let playerLevel = 1;
-    if (typeof currentLevel !== 'undefined') {
+    const lvlSpan = document.getElementById('trainer-lvl');
+    if (lvlSpan) {
+        playerLevel = parseInt(lvlSpan.innerText) || 1;
+    } else if (typeof currentLevel !== 'undefined') {
         playerLevel = currentLevel;
-    } else if (document.getElementById('trainer-lvl')) {
-        playerLevel = parseInt(document.getElementById('trainer-lvl').innerText) || 1;
     } else {
         playerLevel = parseInt(localStorage.getItem('pogo_level')) || 1;
     }
@@ -619,7 +620,7 @@ function animateSprite(spriteId, animClass, duration) {
     el.classList.remove(animClass);
     void el.offsetWidth;
     el.classList.add(animClass);
-    // TIMER MIT MULTIPLIKATOR
+    // Animation Timeout ebenfalls beschleunigen
     setTimeout(() => { el.classList.remove(animClass); }, duration * rogueSpeedMultiplier);
 }
 
@@ -880,13 +881,19 @@ function throwRogueBall(ballType) {
             
             let dex = (typeof pokedex !== 'undefined') ? pokedex : (JSON.parse(localStorage.getItem('pogo_dex_v6')) || {});
             
-            // Speichert die gefangenen Werte, inklusive Shiny-Status in den Dex!
+            // --- FIX: Shiny überschreiben verhindern! ---
+            // Prüfen ob es bereits gefangen ist und bereits Shiny war
+            let existingEntry = dex[rogueEnemy.baseId];
+            let alreadyShiny = existingEntry && existingEntry.isShiny;
+            let saveShinyStatus = rogueEnemy.isShiny || alreadyShiny || false;
+            let saveImg = rogueEnemy.isShiny ? rogueEnemy.img : (existingEntry ? existingEntry.img : rogueEnemy.img);
+            
             dex[rogueEnemy.baseId] = { 
                 name: rogueEnemy.name, 
-                img: rogueEnemy.img, 
+                img: saveImg, 
                 baseId: rogueEnemy.baseId, 
                 types: rogueEnemy.types,
-                isShiny: rogueEnemy.isShiny || false 
+                isShiny: saveShinyStatus 
             };
             
             localStorage.setItem('pogo_dex_v6', JSON.stringify(dex));
